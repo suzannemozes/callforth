@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call Forth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Abril+Fatface&family=Bebas+Neue&family=Caveat:wght@600&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,wght@0,700;1,500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wall: #F4F2EE; --panel: #FFFFFF; --stone: #D8D2C7; --bronze: #8A5A2B;
+    --charcoal: #1C1C1C; --red: #C9332A; --muted: #5E5A55;
+    --h: 'Playfair Display', Georgia, serif;
+    --b: 'EB Garamond', Georgia, serif;
+    --l: 'Oswald', 'Arial Narrow', Arial, sans-serif;
+  }
+  /* 7. Dark room: charcoal walls for late-night work (after 10pm, or when the device is in dark mode) */
+  body.dark { --wall: #1C1C1C; --panel: #262523; --stone: #3B3834; --bronze: #C9A57E; --charcoal: #EDE9E2; --muted: #A8A29A; }
+  body.dark .felt.f3 { background: #2C3533; border-color: #4E6762; color: #EDE9E2; }
+  body.dark .felt.f2 { color: #1C1C1C; }
+  /* 8. The wall warms a little through the day (set from JS as --wall) */
+  html, body { transition: background-color .6s ease; }
+  body.timeup #timer, body.timeup #timer-pill, body.timeup .tbar-wrap { display: none !important; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--wall); color: var(--charcoal); font-family: var(--b); font-size: 19px; line-height: 1.5; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  a { color: var(--charcoal); }
+  .label { font-family: var(--l); text-transform: uppercase; letter-spacing: .15em; font-size: .7rem; color: var(--bronze); font-weight: 500; }
+  h1, h2, h3 { font-family: var(--h); font-weight: 500; line-height: 1.15; margin: 0; }
+  h1 { font-size: 2rem; } h2 { font-size: 1.55rem; } h3 { font-size: 1.15rem; }
+  p { margin: 0 0 .8em; }
+  em { font-style: italic; }
+
+  /* Header + nav */
+  header { position: sticky; top: 0; z-index: 5; background: var(--wall); border-bottom: 1px solid var(--stone); }
+  .bar { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 14px clamp(18px, 5vw, 48px); }
+  .brand { background: none; border: 0; padding: 0; font-family: var(--h); font-weight: 900; letter-spacing: -.01em; font-size: 1.45rem; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); display: inline-block; }
+  nav.top { display: flex; gap: 26px; }
+  nav button { background: none; border: 0; padding: 4px 0; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; white-space: nowrap; color: var(--muted); border-bottom: 1px solid transparent; }
+  nav button.on { color: var(--charcoal); border-bottom-color: var(--charcoal); }
+  nav.bottom { display: none; }
+  @media (max-width: 760px) {
+    nav.top { display: none; }
+    nav.bottom { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel); border-top: 1px solid var(--stone); justify-content: space-around; padding: 10px 4px calc(10px + env(safe-area-inset-bottom)); z-index: 5; }
+    nav.bottom button { font-size: .66rem; letter-spacing: .1em; }
+    main { padding-bottom: 90px !important; }
+  }
+  .chrome-hidden header, .chrome-hidden nav.bottom { display: none !important; }
+
+  main { max-width: 1040px; margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(18px, 5vw, 48px); }
+  .screen { display: none; }
+  /* Calm page changes: each new page settles in like a slow exhale (a soft fade, a small rise, a breath of blur clearing) */
+  .screen.on { display: block; animation: settle .55s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes settle { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } 60% { filter: blur(0); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .step-in { animation: settle .45s cubic-bezier(.22,.61,.36,1) both; }
+  @media (prefers-reduced-motion: reduce) { .screen.on, .step-in { animation: none; } }
+  /* Phones: the main action of each session step sits in thumb reach at the bottom of the screen */
+  @media (max-width: 760px) {
+    #s-session .actions.thumb { position: sticky; bottom: 0; z-index: 4; background: var(--wall); margin-left: -20px; margin-right: -20px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--stone); }
+  }
+  /* Straight to making: verdigris, a little bigger, with a line that changes each visit */
+  .quiet.ready { color: #2E8A7E; font-size: .9rem; letter-spacing: .12em; flex-wrap: wrap; text-align: left; }
+  .quiet.ready .ic { color: #2E8A7E; width: 18px; height: 18px; }
+  .quiet.ready #ready-line { font-family: var(--h); text-transform: none; letter-spacing: 0; font-size: 1.15rem; font-style: italic; }
+  body.dark .quiet.ready, body.dark .quiet.ready .ic { color: #6CC0B3; }
+  .reassure { margin-top: 6px; color: var(--muted); font-style: italic; }
+  .screen.signin.on { display: flex; }
+  .no-preview.shot nav.bottom { position: static; }
+  .narrow { max-width: 620px; margin: 0 auto; }
+
+  .btn { display: inline-block; border: 1px solid var(--charcoal); background: var(--charcoal); color: var(--wall); border-radius: 8px; padding: 13px 24px; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; }
+  .btn.ghost { background: var(--panel); color: var(--charcoal); }
+  /* Quiet action: skip or go back. No underline; small capitals and an arrow. Tap area stays 44px tall. */
+  .quiet { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; background: none; border: 0; padding: 0 4px; color: var(--charcoal); font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; }
+  .quiet .ic { color: var(--bronze); transition: transform .2s; }
+  .quiet:hover .ic { transform: translateX(3px); } .quiet.back:hover .ic { transform: translateX(-3px); }
+  .ic { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  /* Pill: small helpers and settings that show their current state */
+  .pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; background: var(--panel); border: 1px solid var(--stone); border-radius: 999px; padding: 0 16px; font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .68rem; color: var(--charcoal); }
+  .pill:hover { border-color: var(--charcoal); } .pill .ic { color: var(--bronze); }
+  .btn.block { display: block; width: 100%; text-align: center; }
+  .link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; color: var(--charcoal); font-family: var(--b); font-size: .95rem; }
+  .card { background: var(--panel); border: 1px solid var(--stone); padding: 22px 24px; }
+  .rule { height: 1px; background: var(--stone); margin: 28px 0; border: 0; }
+  .note { font-size: .85rem; color: var(--muted); font-style: italic; }
+  .sample { font-family: var(--l); font-size: .6rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--stone); padding: 2px 6px; display: inline-block; }
+
+  /* Sign in */
+  .signin { min-height: 88vh; align-items: center; justify-content: center; }
+  .signin .inner { max-width: 440px; width: 100%; }
+  .signin h1 { font-size: clamp(3.4rem, 11vw, 5.2rem); font-weight: 900; letter-spacing: -.02em; line-height: .95; display: flex; align-items: flex-end; gap: 12px; }
+  .signin h1 .dot { margin-bottom: .18em; }
+  .signin-sub { font-family: var(--h); font-style: italic; font-size: 1.5rem; margin: 14px 0 0; }
+  .signin h1 .dot { width: 13px; height: 13px; border-radius: 50%; background: var(--red); }
+  .field { margin: 22px 0 14px; }
+  .field label { display: block; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 13px 14px; border: 1px solid var(--stone); background: var(--panel); font: inherit; border-radius: 0; }
+  .field input:focus { outline: 2px solid var(--charcoal); outline-offset: 1px; }
+  input, textarea { color: var(--charcoal); }
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+  /* Dark room fields: a slightly lifted panel, clearly outlined, with bright text and a warm focus ring */
+  body.dark .field input, body.dark textarea, body.dark #r-custom { background: #2E2C29 !important; border-color: #6B655D !important; color: #F4F0E9; caret-color: #C9A57E; color-scheme: dark; }
+  body.dark .field input:focus, body.dark textarea:focus, body.dark #r-custom:focus { outline: 2px solid #C9A57E; outline-offset: 1px; border-color: #C9A57E !important; }
+  body.dark input:-webkit-autofill { -webkit-text-fill-color: #F4F0E9; -webkit-box-shadow: 0 0 0 40px #2E2C29 inset; }
+  body.dark .field .label { color: #D9B88F; }
+  body.dark .note { color: #B8B1A8; }
+  body.dark .disc .box { border-color: color-mix(in srgb, var(--s) 55%, #fff); }
+  body.dark .disc .sw { background: color-mix(in srgb, var(--s) 80%, #fff); }
+
+  /* Welcome */
+  .steps { list-style: none; padding: 0; margin: 28px 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 54px 1fr; gap: 6px; padding: 18px 0; border-top: 1px solid var(--stone); }
+  .steps li::before { content: "No. 0" counter(s); font-family: var(--l); font-size: .66rem; letter-spacing: .14em; color: var(--bronze); padding-top: 6px; }
+
+  /* Home */
+  .hello { margin-bottom: 30px; }
+  .hello h1 { margin-top: 18px; }
+  #hello-name { font-size: 1.02rem; letter-spacing: .14em; }
+  .blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .blk { text-align: left; background: var(--panel); border: 1px solid var(--stone); padding: 20px 22px; min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; transition: border-color .15s; }
+  .blk:hover { border-color: var(--charcoal); }
+  .blk .q { font-family: var(--h); font-size: 1.2rem; line-height: 1.25; }
+  .blk .meta { margin-top: 12px; }
+  .blk.locked { background: transparent; }
+  .blk.locked .q { color: var(--muted); }
+  .blk.soon { background: transparent; border-style: dashed; cursor: default; }
+  .blk.soon .q { color: var(--muted); font-style: italic; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 36px 0 0; }
+  .stat .n { font-family: var(--h); font-size: 1.8rem; line-height: 1.1; }
+
+  /* Session */
+  .crumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+  .crumbs span { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; color: var(--muted); border-bottom: 1px solid transparent; padding-bottom: 2px; }
+  .crumbs span.on { color: var(--charcoal); border-bottom-color: var(--charcoal); }
+  .breath { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 34px 0; }
+  .circle { width: 200px; height: 200px; border: 1px solid var(--charcoal); border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: scale(.6); transition: transform 4s ease-in-out; background: var(--panel); }
+  /* The circle carries the timer bar's dawn-to-dusk colors: it starts blush and deepens round by round toward dusk blue */
+  .circle { background-color: #EFE3DA; background-image: radial-gradient(circle at 38% 32%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%); border-color: rgba(28,28,28,.35);
+    transition-property: transform, background-color; }
+  body.dark .circle { filter: brightness(.82) saturate(.9); border-color: rgba(237,233,226,.25); }
+  body.dark .circle span { color: #1C1C1C; }
+  .circle span { font-family: var(--l); text-transform: uppercase; letter-spacing: .16em; font-size: .72rem; }
+  .circle span.count { font-family: var(--h); font-size: 3.4rem; letter-spacing: 0; line-height: 1; }
+  details { border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); padding: 14px 0; margin: 20px 0; }
+  summary { cursor: pointer; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .7rem; color: var(--bronze); }
+  details p { margin-top: 12px; }
+  .move { font-family: var(--h); font-size: 1.5rem; line-height: 1.35; margin: 18px 0 26px; }
+  /* Your move: the "open your work" cue shows alone, then hands over to the prompt.
+     Cue holds about 3.5s, fades out over .5s; the prompt fades in over .5s, starting .3s before the cue is gone (a brief overlap). */
+  .swap { display: grid; }
+  .swap > * { grid-area: 1 / 1; }
+  .cue { align-self: center; padding: 10px 0 18px; cursor: pointer; }
+  .cue .big { font-family: var(--h); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.1; margin: 0; }
+  .cue .small { font-family: var(--b); font-size: 1.15rem; color: var(--muted); margin: 12px 0 0; font-style: italic; }
+  .swap.play .cue { animation: cueOut .5s ease-in 3.5s forwards; }
+  .swap.play .prompt { opacity: 0; animation: promptIn .5s ease-out 3.7s forwards; }
+  .swap.done .cue { opacity: 0; visibility: hidden; animation: none; }
+  .swap.done .prompt { opacity: 1; animation: none; }
+  @keyframes cueOut { to { opacity: 0; visibility: hidden; } }
+  @keyframes promptIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .swap.play .cue { animation-duration: .01s; } .swap.play .prompt { animation-duration: .01s; } }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .else { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0; }
+  .else button { text-align: left; background: var(--panel); border: 1px solid var(--stone); padding: 16px 18px; }
+  .else button:hover { border-color: var(--charcoal); }
+  .else button .t { font-family: var(--h); font-size: 1.1rem; display: block; }
+  .alt { margin: 18px 0 24px; }
+  .audio { display: flex; align-items: center; gap: 12px; border: 1px solid var(--stone); padding: 10px 14px; background: var(--panel); margin: 12px 0; }
+  .audio .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--charcoal); background: none; font-size: .7rem; }
+  .audio .track { flex: 1; height: 1px; background: var(--stone); }
+  .timer { font-family: var(--h); font-size: 4.4rem; text-align: center; margin: 22px 0 12px; letter-spacing: .02em; }
+  .timer.over { color: var(--bronze); }
+  .over-note { text-align: center; font-family: var(--l); text-transform: uppercase; letter-spacing: .15em; font-size: .7rem; color: var(--bronze); margin: -6px 0 14px; }
+  /* 2. Frame timer: a thin line draws itself around the edge of the screen */
+  /* 2. Dawn-to-dusk bar: a wide band that fills left to right, shifting blush, ochre, sage, dusk blue as time passes */
+  .tbar-wrap { display: none; margin: 34px 0 22px; }
+  .tbar { position: relative; height: 64px; background: #ECE8E1; border: 1px solid var(--stone); overflow: hidden; }
+  .tbar-fill { position: absolute; inset: 0 auto 0 0; width: 0; transition: width 1s linear;
+    background: linear-gradient(90deg,#E9D3C6 0%,#E3C892 30%,#B9C49A 55%,#8DBAB0 78%,#6E9FAE 100%); background-size: var(--bw, 600px) 100%; background-repeat: no-repeat; }
+  .tbar-fill::after { content: ""; position: absolute; right: -30px; top: 0; bottom: 0; width: 30px; background: linear-gradient(90deg, rgba(255,255,255,.35), rgba(255,255,255,0)); }
+  .tbar-cap { text-align: center; font-style: italic; color: var(--muted); margin-top: 10px; }
+  body.dark .tbar { background: #2A2825; } body.dark .tbar-fill { filter: brightness(.82) saturate(.9); }
+  body.dark .tbar-fill::after { display: none; }
+  body.barview .timer { display: none; } body.barview .tbar-wrap { display: block; }
+  /* 1. Gentle end of the timer */
+  .time-up { display: none; text-align: center; margin: 10px 0 18px; }
+  .time-up h3 { font-family: var(--h); font-size: 1.7rem; margin-bottom: 6px; }
+  .time-up p { color: var(--muted); font-style: italic; }
+  /* 4. Their own words, back to them */
+  .echo { margin: 14px 0 0; font-style: italic; color: var(--muted); border-left: 2px solid var(--stone); padding-left: 12px; }
+  .echo .who { font-style: normal; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .62rem; color: var(--bronze); margin-left: 6px; }
+  .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 20px; }
+  .chip { border: 1px solid var(--stone); background: var(--panel); padding: 7px 14px; font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .66rem; border-radius: 999px; }
+  .chip.on { border-color: var(--charcoal); background: var(--charcoal); color: var(--wall); }
+  textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--stone); font: inherit; background: var(--panel); resize: vertical; }
+  .bridge { background: var(--charcoal); color: var(--wall); padding: 26px 28px; margin-top: 30px; }
+  .bridge .label { color: #C9A57E; }
+  .bridge h3 { margin: 6px 0 8px; }
+  .bridge .btn.ghost { background: transparent; color: var(--wall); border-color: var(--wall); }
+  .bridge .btn { background: var(--wall); color: var(--charcoal); border-color: var(--wall); margin-top: 8px; }
+
+  /* Log */
+  .two { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(3, 1fr); } }
+  .entry { padding: 16px 0; border-top: 1px solid var(--stone); }
+  .entry .when { margin-bottom: 4px; }
+  .entry .what { font-style: italic; }
+  .bars .row { display: grid; grid-template-columns: 1fr 34px; gap: 10px; align-items: center; margin: 10px 0; font-size: .92rem; }
+  .bars .track { grid-column: 1 / -1; height: 3px; background: var(--stone); margin-top: -4px; }
+  .bars .fill { height: 3px; background: var(--charcoal); }
+
+  /* Studio + Suz */
+  .wall-label { border-left: 1px solid var(--charcoal); padding-left: 20px; margin: 26px 0; }
+  .price { font-family: var(--h); font-size: 3rem; line-height: 1; margin: 6px 0; }
+  .cmp { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: .95rem; }
+  .cmp th, .cmp td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--stone); vertical-align: top; }
+  .cmp th { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .66rem; color: var(--bronze); font-weight: 500; }
+  .portrait { width: 100%; aspect-ratio: 4/5; background: var(--stone); display: flex; align-items: center; justify-content: center; filter: grayscale(1); }
+  .about-block { display: grid; grid-template-columns: 1.2fr 1fr; gap: 36px; align-items: center; background: var(--panel); border: 1px solid var(--stone); padding: clamp(22px, 4vw, 44px); margin-bottom: 14px; }
+  .about-block.flip .about-text { order: 2; }
+  .about-block.single { grid-template-columns: 1fr; }
+  .about-block h2 { margin: 8px 0 14px; }
+  .about-frame { aspect-ratio: 4/5; border: 1px solid var(--charcoal); outline: 10px solid var(--wall); outline-offset: -22px; display: flex; align-items: center; justify-content: center; }
+  .known { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 28px; }
+  .known li { border-top: 1px solid var(--stone); padding: 12px 0; }
+  .known .label { display: block; margin-bottom: 2px; }
+  @media (max-width: 760px) { .about-block { grid-template-columns: 1fr; } .about-block.flip .about-text { order: 0; } .about-frame { aspect-ratio: 3/2; } }
+  /* Daily light: the one room in the gallery where color is allowed */
+  #quote-stage { position: fixed; inset: 0; z-index: 8; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 8vh 8vw; transition: background .4s; }
+  #quote-art { position: absolute; inset: 0; pointer-events: none; }
+  #quote-art svg { width: 100%; height: 100%; display: block; }
+  #quote-box { position: relative; max-width: 880px; width: 100%; animation: rise .9s ease both; }
+  #quote-ask { font-family: var(--h); font-size: 1.3rem; margin: 0 0 14px; }
+  .quote-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .q-yes { background: var(--qink); color: var(--qbg); border: 1px solid var(--qink); border-radius: 8px; padding: 13px 22px; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; }
+  .q-no { background: transparent; border: 1px solid var(--qink); color: var(--qink); border-radius: 8px; padding: 13px 22px; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; }
+  #quote-text { margin: 18px 0 26px; line-height: 1.08; font-size: clamp(2.2rem, 6.4vw, 4.8rem); }
+  #quote-foot { margin-top: 8px; }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-14px) rotate(4deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fl { animation: floaty 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .fl2 { animation: floaty 9s ease-in-out infinite reverse; transform-box: fill-box; transform-origin: center; }
+  .sp { animation: spin 60s linear infinite; transform-box: fill-box; transform-origin: center; }
+  @media (prefers-reduced-motion: reduce) { .fl, .fl2, .sp, #quote-box { animation: none; } }
+  .two-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 6px; }
+  .choice { text-align: left; background: var(--panel); border: 1px solid var(--stone); padding: 22px; min-height: 150px; display: flex; flex-direction: column; gap: 6px; }
+  .choice:hover, .choice.on { border-color: var(--charcoal); }
+  .choice .t { font-family: var(--h); font-size: 1.45rem; line-height: 1.2; }
+  .choice .w { color: var(--muted); font-size: .95rem; }
+  .choice.locked .t { color: var(--muted); }
+  #else-detail { margin-top: 14px; }
+  .why-two { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--stone); font-size: .92rem; }
+  .why-two p { margin: 8px 0; }
+  @media (max-width: 420px) { .two-choice { grid-template-columns: 1fr; } .choice { min-height: 0; } }
+  .setting { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--stone); }
+  .setting:first-of-type { border-top: 1px solid var(--stone); margin-top: 22px; }
+  .switch { flex: none; width: 52px; height: 30px; border-radius: 999px; border: 1px solid var(--charcoal); background: var(--panel); position: relative; padding: 0; }
+  .switch span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--charcoal); transition: left .2s; }
+  .switch[aria-checked="true"] { background: var(--charcoal); }
+  .switch[aria-checked="true"] span { left: 25px; background: var(--wall); }
+  .log-settings { display: flex; align-items: center; gap: 14px; margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--stone); flex-wrap: wrap; }
+  .days { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 4px; }
+  .days .chip { min-width:46px; text-align:center; }
+  .cal-btns { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+  .cal-btns .btn { width:100%; }
+  .cal-btns .btn:disabled { opacity:.4; }
+  .event-preview { border-left:3px solid var(--bronze); background:var(--panel); padding:14px 16px; margin:14px 0; font-size:.95rem; }
+  .link-line { color:var(--bronze); text-decoration:underline; word-break:break-all; }
+  .email-preview { border:1px dashed var(--stone); padding:12px 14px; margin:12px 0 0; font-size:.95rem; }
+  .gear { display: inline-flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--stone); border-radius: 999px; padding: 9px 16px 9px 12px; font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .68rem; color: var(--charcoal); }
+  .gear:hover { border-color: var(--charcoal); }
+  .gear svg { transition: transform .4s; } .gear:hover svg { transform: rotate(60deg); }
+  /* Focus mode: no menu during a session */
+  .leave { display: none !important; min-height: 36px; padding: 0 14px; }
+  .focus nav.top, .focus nav.bottom { display: none !important; }
+  .focus .leave { display: inline-flex !important; }
+  .focus .brand { pointer-events: none; }
+  .focus main { padding-bottom: clamp(24px, 5vw, 56px) !important; }
+  .breath-progress { width: 200px; height: 6px; background: #ECE8E1; border: 1px solid var(--stone); position: relative; overflow: hidden; }
+  .breath-progress span { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width .6s;
+    background: linear-gradient(90deg,#E9D3C6 0%,#E3C892 30%,#B9C49A 55%,#8DBAB0 78%,#6E9FAE 100%); background-size: 200px 100%; background-repeat: no-repeat; }
+  body.dark .breath-progress { background: #2A2825; } body.dark .breath-progress span { filter: brightness(.82); }
+  .why-two { margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--stone); }
+  .felt { min-width: 120px; }
+  /* Log it: verdigris, most saturated on the left, fading to nearly the plain button on the right */
+  .felt.f1 { background: #2E8A7E; border-color: #2E8A7E; color: #F4F2EE; }
+  .felt.f2 { background: #9CCBC2; border-color: #6FA79D; color: #1C1C1C; }
+  .felt.f3 { background: #EEF4F2; border-color: #A9C2BC; color: #1C1C1C; }
+  @media (max-width: 480px) { .felt { min-width: 0; flex: 1 1 0; padding: 13px 6px; letter-spacing: .1em; } }
+  .felt.f1:hover { background: #24766B; } .felt.f2:hover { background: #8ABFB5; } .felt.f3:hover { background: #E2ECE9; }
+  .disc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  /* Paint chips: each discipline has its own muted gallery tone, shown as a strip on the left; choosing washes the tile in it */
+  .disc { text-align: left; background: var(--panel); border: 1px solid var(--stone); padding: 11px 14px 11px 0; font-family: var(--b); font-size: .95rem; line-height: 1.25; display: flex; align-items: center; gap: 12px; overflow: hidden; color: var(--charcoal); transition: background .15s, border-color .15s; }
+  .disc .sw { align-self: stretch; width: 10px; flex: none; background: var(--s); margin: -11px 0; }
+  .disc .box { width: 14px; height: 14px; border: 1px solid var(--s); flex: none; }
+  .disc:hover { border-color: var(--s); }
+  .disc.on { background: color-mix(in srgb, var(--s) 14%, var(--panel)); border-color: var(--s); }
+  .disc.on .box { background: var(--s); }
+  @media (max-width: 420px) { .disc-grid { grid-template-columns: 1fr; } }
+  .tag-x { margin-left: 6px; }
+  .site-foot { text-align: center; margin-top: 48px; padding: 22px 0 8px; border-top: 1px solid var(--stone); }
+  .site-foot .pill { margin-bottom: 14px; }
+  .disclaimer { font-size: .78rem; color: var(--muted); text-align: center; margin: 0; font-style: italic; }
+  .copyright { font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .62rem; color: var(--muted); margin: 8px 0 0; }
+  .focus .site-foot .pill { display: none; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; background: rgba(28,28,28,.45); display: none; align-items: center; justify-content: center; z-index: 20; padding: 18px; }
+  .modal.on { display: flex; }
+  .modal .card { max-width: 520px; width: 100%; }
+
+  /* Preview-only jump menu */
+  .preview-only { position: fixed; right: 12px; bottom: 96px; z-index: 30; background: #fff; border: 1px dashed #8A5A2B; padding: 8px 10px; font-family: var(--l); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; display: flex; flex-direction: column; gap: 6px; }
+  .preview-only select { font: inherit; text-transform: none; letter-spacing: 0; }
+  @media (min-width: 761px) { .preview-only { bottom: 16px; } }
+  .no-preview .preview-only { display: none !important; }
+</style>
+</head>
+<body class="chrome-hidden">
+
+<header>
+  <div class="bar">
+    <button class="brand" onclick="go('home')" aria-label="Call Forth, go home">Call Forth <span class="dot"></span></button>
+    <button class="pill leave" aria-label="Leave session" onclick="track('session_left',{step:state.step});go('home')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> Leave</button>
+    <nav class="top" aria-label="Main">
+      <button data-nav="home" onclick="go('home')">Home</button>
+      <button data-nav="session" onclick="startOrResume()">Session</button>
+      <button data-nav="log" onclick="go('log')">Log</button>
+      <button data-nav="studio" onclick="go('studio')">Studio</button>
+      <button data-nav="suz" onclick="go('suz')">About</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- SIGN IN -->
+  <section class="screen signin" id="s-signin">
+    <div class="inner">
+      <h1>Call Forth <span class="dot"></span></h1>
+      <p class="signin-sub">Make the thing.</p>
+      <div class="field">
+        <label class="label" for="email">Email</label>
+        <input id="email" type="email" value="maya@example.com" autocomplete="email">
+      </div>
+      <button class="btn block" onclick="signIn()">Email me a sign-in link</button>
+      <p class="note" style="margin-top:14px">Free to start. No password: tap the link we email you, and Call Forth keeps you signed in on this device.</p>
+    </div>
+  </section>
+
+
+  <!-- REGISTER (first sign-in only) -->
+  <section class="screen" id="s-register">
+    <div class="narrow">
+      <div class="label">Before we begin</div>
+      <h1 style="margin-top:8px">Tell me about your practice.</h1>
+      <p style="margin-top:12px">Three quick questions, so Call Forth can speak to the work you actually make.</p>
+      <div class="field">
+        <label class="label" for="r-name">What should I call you?</label>
+        <input id="r-name" type="text" value="Maya" autocomplete="given-name">
+      </div>
+      <div class="field">
+        <span class="label" style="display:block;margin-bottom:4px">What do you make?</span>
+        <p class="note" style="margin:0 0 10px">Choose all that apply. Most creators do more than one thing.</p>
+        <div class="disc-grid" id="disc-chips"></div>
+        <div id="custom-wrap" style="display:none;margin-top:12px">
+          <div style="display:flex;gap:8px">
+            <input id="r-custom" type="text" placeholder="Your own tag, e.g. printmaking" style="flex:1;padding:11px 12px;border:1px solid var(--stone);background:var(--panel);font:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag();}">
+            <button class="btn ghost" onclick="addTag()">Add</button>
+          </div>
+          <div class="chips" id="custom-tags" style="justify-content:flex-start;margin:10px 0 0"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="r-years" id="r-years-label">How long have you been creating?</label>
+        <input id="r-years" type="text" value="12 years" placeholder="e.g. 12 years, six months, since college">
+        <p class="note" style="margin-top:6px">However you'd put it. Call Forth will remember, and remind you on the hard days.</p>
+      </div>
+      <p class="note" style="margin:0 0 14px">Call Forth records which steps you use, never what you write, so it can get better at helping you. [Link to privacy note.]</p>
+      <button class="btn" onclick="register()">Continue</button>
+    </div>
+  </section>
+
+  <!-- WELCOME -->
+  <section class="screen" id="s-welcome">
+    <div class="narrow">
+      <div class="label" id="welcome-name">Welcome, Maya</div>
+      <h1 style="margin-top:8px">Here's how Call Forth works.</h1>
+      <ol class="steps">
+        <li><div><h3>Tell me what's in the way.</h3><p>Pick the block that sounds most like today. In your words, not a diagnosis.</p></div></li>
+        <li><div><h3>Breathe, then take your move.</h3><p>A short breath matched to your block, and one specific thing to try. If it doesn't fit, ask for something else.</p></div></li>
+        <li><div><h3>Make the thing. Then log it.</h3><p>Set the timer and work. Afterwards, note what you made. Your patterns will start to show.</p></div></li>
+      </ol>
+      <button class="btn" onclick="go('home')">Begin</button>
+    </div>
+  </section>
+
+  <!-- HOME -->
+  <section class="screen" id="s-home">
+    <div class="hello">
+      <div class="label" id="hello-name">Good afternoon, Maya</div>
+      <h1 id="home-q">What's in the way today?</h1>
+      <p class="reassure">About two minutes from here to making.</p>
+      <p class="echo" id="echo" style="display:none"></p>
+    </div>
+    <div class="blocks" id="blocks"></div>
+    <p style="margin-top:20px"><button class="quiet ready" onclick="straightToMaking()"><span id="ready-line">I feel pretty good today.</span> <span style="white-space:nowrap;display:inline-flex;align-items:center;gap:8px">Straight to making <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></p>
+  </section>
+
+  <!-- SESSION -->
+  <section class="screen" id="s-session">
+    <div class="narrow">
+      <div class="crumbs" id="crumbs"></div>
+
+      <!-- breathe: one breath, chosen for them -->
+      <div id="step-breathe">
+        <p class="note" id="last-line" style="font-style:normal;margin:0 0 6px"></p>
+        <h2 style="margin-top:6px" id="breath-title"></h2>
+        <p id="breath-how" style="margin-top:10px"></p>
+        <details id="breath-how-fold" style="display:none;margin-top:8px"><summary>How to do it</summary><p id="breath-how-2"></p></details>
+        <div class="breath">
+          <div class="circle" id="circle"><span id="circle-word">Ready</span></div>
+          <div class="breath-progress"><span id="audio-fill"></span></div>
+          <div class="note" id="breath-count">About 60 to 90 seconds</div>
+        </div>
+        <div class="actions thumb" style="justify-content:center">
+          <button class="btn" id="breath-btn" onclick="toggleBreath()">Pause</button>
+          <button class="quiet" onclick="setStep('move')">Skip to my move <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+        <details>
+          <summary>Why this works</summary>
+          <p id="breath-why"></p>
+          <p class="note" id="breath-src"></p>
+        </details>
+      </div>
+
+      <!-- move -->
+      <div id="step-move">
+        <div class="swap" id="move-swap">
+          <div class="cue" onclick="cueDone()" title="Tap to skip">
+            <p class="big">Get your work open first.</p>
+            <p class="small">The file, the sketchbook, the instrument.</p>
+          </div>
+          <div class="prompt">
+            <div class="label" style="margin-top:6px">Your move <span class="sample" style="margin-left:6px">Sample</span></div>
+            <p class="move" id="move-text"></p>
+          </div>
+        </div>
+        <div class="actions thumb">
+          <button class="btn" onclick="beginMaking()">My work is open. Start.</button>
+          <button class="btn ghost" onclick="setStep('else')">Try something else</button>
+        </div>
+      </div>
+
+      <!-- something else: two choices only -->
+      <div id="step-else">
+        <button class="quiet back" style="margin:-6px 0 4px -4px" onclick="setStep('move')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Back to my move</button>
+        <div class="label" style="margin-top:6px">Something else</div>
+        <h2 style="margin:8px 0 6px">Two ways in. Pick one.</h2>
+        <div class="two-choice" id="else-choices"></div>
+        <div id="else-detail"></div>
+        <p class="note why-two">Why only two? When you're stuck, fewer choices make it easier to start.</p>
+      </div>
+
+      <!-- flow: starts the moment they tap "I'll try this" -->
+      <div id="step-flow">
+        <h2 style="margin-top:8px;text-align:center">Make the thing.</h2>
+        <div class="timer" id="timer">15:00</div>
+        <div class="tbar-wrap" id="tbar-wrap"><div class="tbar"><div class="tbar-fill" id="tbar-fill"></div></div><p class="tbar-cap" id="tbar-cap">15 min left</p></div>
+        <p class="over-note" id="over-note" style="display:none">Still going</p>
+        <div class="time-up" id="time-up">
+          <h3>Time.</h3>
+          <p>Keep going if you're in it.</p>
+          <div class="actions" style="justify-content:center;margin-top:12px">
+            <button class="btn" onclick="keepGoing()">Keep going</button>
+            <button class="btn ghost" onclick="finishFlow()">I'm done</button>
+          </div>
+        </div>
+        <div class="actions" id="timer-actions" style="justify-content:center">
+          <button class="btn" id="timer-btn" onclick="toggleTimer()">Pause</button>
+          <button class="btn ghost" onclick="finishFlow()">I'm done</button>
+        </div>
+        <p style="text-align:center;margin-top:18px"><button class="pill" id="timer-pill" aria-label="Change length or sound" aria-expanded="false" onclick="toggleTimerPanel()"><span id="timer-status">15 min</span> <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></p>
+        <div id="timer-panel" style="display:none">
+          <div class="chips" id="len-chips">
+            <button class="chip" data-len="5" onclick="setLen(5)">5 min</button>
+            <button class="chip" data-len="15" onclick="setLen(15)">15 min</button>
+            <button class="chip" data-len="25" onclick="setLen(25)">25 min</button>
+          </div>
+          <div class="chips" id="snd-chips">
+            <button class="chip" data-snd="Silence" onclick="setSnd('Silence')">Silence</button>
+            <button class="chip" data-snd="Rain on glass" onclick="setSnd('Rain on glass')">Rain on glass</button>
+            <button class="chip" data-snd="Studio hum" onclick="setSnd('Studio hum')">Studio hum</button>
+          </div>
+          <div class="chips" id="view-chips">
+            <button class="chip" data-view="clock" onclick="setView('clock')">Show the clock</button>
+            <button class="chip" data-view="bar" onclick="setView('bar')">Show the bar</button>
+          </div>
+          <p class="note" style="text-align:center;margin:0">Call Forth will remember this for next time.</p>
+        </div>
+      </div>
+
+      <!-- log: one tap saves -->
+      <div id="step-log">
+        <h2 style="margin-top:8px">You walked through it.</h2>
+        <p style="margin-top:10px">What did you make? A line or two, if you like.</p>
+        <textarea id="log-text" placeholder="e.g. 300 words of the kitchen scene. Terrible and alive."></textarea>
+        <div class="label" style="margin-top:16px">How did it go? Tap to save.</div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn felt f1" onclick="saveLog('helped')">It helped</button>
+          <button class="btn felt f2" onclick="saveLog('little')">A little</button>
+          <button class="btn felt f3" onclick="saveLog('not')">Not today</button>
+        </div>
+        <p style="margin-top:14px"><button class="quiet" onclick="skipLog()">Skip <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section class="screen" id="s-log">
+    <div class="label">Your log</div>
+    <h1 style="margin:8px 0 26px" id="log-h">Look how far you've come.</h1>
+    <div id="log-rest" class="card narrow" style="display:none;margin:0">
+      <div class="label">Your log is resting</div>
+      <h3 style="margin:8px 0">You've chosen not to see your history right now.</h3>
+      <p>Everything is still saved, so nothing is lost. You can bring it back whenever it would help.</p>
+      <button class="btn ghost" onclick="setPref('showHistory', true); go('log');">Show my history</button>
+    </div>
+    <div class="two" id="log-main">
+      <div>
+        <div class="label">Filter by block</div>
+        <div class="chips" id="log-filter" style="justify-content:flex-start;margin:8px 0 6px"></div>
+        <p class="note" id="filter-note" style="margin:0 0 6px"></p>
+        <div id="worked"></div>
+        <div id="entries"></div>
+      </div>
+      <div>
+        <div class="card" id="log-patterns">
+          <div class="label">Your patterns this month</div>
+          <p style="margin-top:12px" id="pattern-line"></p>
+          <div class="bars" id="bars"></div>
+        </div>
+        <div class="card" style="margin-top:14px" id="log-total">
+          <div class="label">Total</div>
+          <p style="margin-top:8px"><span style="font-family:var(--h);font-size:1.6rem" id="log-min">0</span> minutes making, across <span id="log-n">0</span> sessions. You showed up <span id="log-days">11</span> days this month.</p>
+        </div>
+      </div>
+    </div>
+    <div class="bridge consult-panel">
+          <div class="label">When you're ready</div>
+          <h3>Want to talk through the project itself?</h3>
+          <p>You've come back to the work again and again. If you'd like a second pair of eyes on where the whole thing is going, book a consult with Suz.</p>
+          <button class="btn" onclick="bookConsult('panel')">Book a consult</button>
+        </div>
+    <div class="bridge" id="hours-invite" style="display:none">
+      <div class="label">Studio hours</div>
+      <h3>Want to make this a standing date?</h3>
+      <p>Pick a regular time to make the thing. Your calendar reminds you, and one tap opens Call Forth ready to begin.</p>
+      <button class="btn" onclick="track('hours_invite',{choice:'yes'});state.hoursOffered=true;go('hours')">Set my studio hours</button>
+      <button class="btn ghost" style="margin-left:10px" onclick="track('hours_invite',{choice:'not now'});state.hoursOffered=true;renderLog(true)">Not now</button>
+    </div>
+    <div class="log-settings">
+      <button class="gear" onclick="go('settings')" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
+      <span class="note" id="gear-hint">Numbers not for you? You can turn them off.</span>
+    </div>
+  </section>
+
+  <!-- STUDIO -->
+  <section class="screen" id="s-studio">
+    <div class="narrow">
+      <div class="label">The full studio</div>
+      <h1 style="margin-top:8px">Every door, and more of Suz.</h1>
+      <p style="margin-top:14px">The free version helps on its own. The studio is for when you want the app to know you and go deeper with you.</p>
+      <table class="cmp">
+        <tr><th></th><th>Free</th><th>Studio</th></tr>
+        <tr><td>Blocks</td><td>3</td><td>All 6, plus new doors as they open</td></tr>
+        <tr><td>Breathing, guided by the circle</td><td>The breath matched to your block</td><td>The breath that helps you most, learned from your sessions</td></tr>
+        <tr><td>Your move</td><td>1 per block</td><td>More prompts per block</td></tr>
+        <tr><td>Try something else</td><td>Two ways in, from 3</td><td>Two ways in, from 14, many guided by Suz's voice</td></tr>
+        <tr><td>Timer</td><td>Yes</td><td>Yes, with sound</td></tr>
+        <tr><td>Studio hours</td><td></td><td>Set your regular times; your calendar reminds you, and one tap opens a session</td></tr>
+        <tr><td>Log and patterns</td><td>Last 3 sessions</td><td>Everything, with your patterns</td></tr>
+      </table>
+      <div class="wall-label">
+        <div class="label">Founding member</div>
+        <div class="price">$27 <span style="font-size:1.1rem;font-family:var(--b)">once</span></div>
+        <p>Lifetime access for the first [100] members. Then $47.</p>
+      </div>
+      <button class="btn" id="upgrade-btn" onclick="upgrade()">Open the full studio</button>
+      <p class="note" style="margin-top:12px">[Payment to be connected in AI Studio.]</p>
+      <div class="bridge consult-panel">
+          <div class="label">When you're ready</div>
+          <h3>Want to talk through the project itself?</h3>
+          <p>You've come back to the work again and again. If you'd like a second pair of eyes on where the whole thing is going, book a consult with Suz.</p>
+          <button class="btn" onclick="bookConsult('panel')">Book a consult</button>
+        </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS: what you see -->
+  <section class="screen" id="s-settings">
+    <div class="narrow">
+      <div class="label">Settings</div>
+      <h1 style="margin:8px 0 12px">Your practice, your way.</h1>
+      <div class="setting">
+        <div><h3>Studio hours</h3><p class="note" style="font-style:normal;margin:4px 0 0" id="hours-line"></p></div>
+        <button class="gear" id="hours-btn" style="flex:none" onclick="state.member ? go('hours') : go('studio')">Set</button>
+      </div>
+      <div class="label" style="margin-top:34px">What you see</div>
+      <p style="margin-top:8px">Numbers motivate some people and weigh on others. Choose what helps you. Everything is still saved either way, so you can switch back any time.</p>
+      <div class="setting">
+        <div><h3>Show my numbers</h3><p class="note" style="font-style:normal;margin:4px 0 0">Sessions, minutes making and days you showed up, in your log.</p></div>
+        <button class="switch" role="switch" id="sw-numbers" onclick="setPref('showNumbers', !state.showNumbers)"><span></span></button>
+      </div>
+      <div class="setting">
+        <div><h3>Show my log history</h3><p class="note" style="font-style:normal;margin:4px 0 0">Your past sessions, patterns and "last time you felt this."</p></div>
+        <button class="switch" role="switch" id="sw-history" onclick="setPref('showHistory', !state.showHistory)"><span></span></button>
+      </div>
+      <button class="btn" style="margin-top:26px" onclick="go(state.backFrom || 'home')">Done</button>
+    </div>
+  </section>
+
+  <!-- STUDIO HOURS (studio members) -->
+  <section class="screen" id="s-hours">
+    <div class="narrow">
+      <div class="label">Studio hours</div>
+      <h1 style="margin:8px 0 12px">When do you make the thing?</h1>
+      <p>Pick a regular time. Your calendar reminds you, and one tap opens Call Forth ready to begin.</p>
+      <div class="field"><label class="label">Which days</label>
+        <div class="days" id="hr-days"></div></div>
+      <div class="field"><label class="label" for="hr-time">What time</label>
+        <input type="time" id="hr-time" value="09:00" onchange="state.hours.time=this.value;renderHours()" style="max-width:180px"></div>
+      <div class="field"><label class="label">How long</label>
+        <div class="chips" id="hr-len" style="justify-content:flex-start;margin:8px 0 0"></div></div>
+      <div class="setting" style="border-top:1px solid var(--stone);margin-top:22px">
+        <div><h3>Also email me when it's time</h3><p class="note" style="font-style:normal;margin:4px 0 0">A backup, in case your calendar's reminder doesn't show.</p>
+          <div class="email-preview" id="hr-email-preview"><div class="label" style="margin-bottom:4px">The email</div>Are you ready to practice? <span class="link-line">Tap to begin.</span></div></div>
+        <button class="switch" role="switch" id="sw-email" onclick="state.hours.email=!state.hours.email;renderHours()"><span></span></button>
+      </div>
+      <div class="label" style="margin-top:26px">What goes on your calendar</div>
+      <div class="event-preview" id="hr-preview"></div>
+      <div class="cal-btns">
+        <button class="btn" onclick="addToCal('google')">Add to Google Calendar</button>
+        <button class="btn ghost" onclick="addToCal('apple')">Add to Apple Calendar</button>
+        <button class="btn ghost" onclick="addToCal('outlook')">Add to Outlook</button>
+      </div>
+      <p class="note" style="margin-top:12px">On Google Calendar, the reminder follows your usual notification setting. Set it to "At start of event" if you like.</p>
+      <div class="actions" style="margin-top:22px;align-items:center"><button class="btn ghost" onclick="go('settings')">Done</button> <button class="quiet" id="hr-clear" onclick="clearHours()">Remove studio hours</button></div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="screen" id="s-suz">
+    <div class="label">About</div>
+    <h1 style="margin:8px 0 34px">The room before the work.</h1>
+
+    <div class="about-block">
+      <div class="about-text">
+        <div class="label">About Call Forth</div>
+        <h2>For the moment before you begin.</h2>
+        <p>Most creators aren't short on talent. They're stopped at the threshold: the blank page, the cold studio, the critic who arrives before the first mark.</p>
+        <p>Call Forth meets you right there. Tell it what's in the way today, breathe, and take one small, specific move into the work. If that move doesn't fit, ask for something else. There's always another door.</p>
+        <p class="note">Every neuroscience note in the app comes with its source.</p>
+      </div>
+      <div class="about-frame"><span class="label" style="color:var(--charcoal)">Image: the empty frame</span></div>
+    </div>
+
+    <div class="about-block single">
+      <div class="about-text">
+        <div class="label">Why Call Forth keeps it simple</div>
+        <h2>Fewer choices. More work.</h2>
+        <p>When we're tired, stressed or unsure what we want, a long menu works against us. In a well-known study, shoppers offered 24 jams were far less likely to buy one than shoppers offered 6. Later reviews found that too many options hurt most when a choice feels hard and we don't know what we prefer, which is exactly how a block feels.</p>
+        <p>So Call Forth makes the small decisions for you: one breath, one move, and only two other ways in if you need them. The less time you spend here, the better it's working.</p>
+        <p class="note" style="margin:0">Sources: Iyengar &amp; Lepper (2000), "When choice is demotivating," Journal of Personality and Social Psychology. Chernev, Böckenholt &amp; Goodman (2015), "Choice overload: a conceptual review and meta-analysis," Journal of Consumer Psychology.</p>
+      </div>
+    </div>
+
+    <div class="about-block flip">
+      <div class="about-text">
+        <div class="label">The Founder</div>
+        <h2>Suzanne Mozes</h2>
+        <p>Suzanne spent years in magazines writing fluently in every voice but her own, until she went to Columbia University School of the Arts to find it and discovered how much she loves to teach.</p>
+        <p>A writer, editor and visual artist with more than 25 years of craft, she helps brilliant minds shape what only they can make. She built Call Forth so her students' best moves would be there at 2am too.</p>
+      </div>
+      <div><div class="portrait"><span class="label" style="color:var(--charcoal)">Photo of Suz, black and white</span></div>
+        <div class="label" style="margin-top:8px">Fig. 1 · Suzanne Mozes</div></div>
+    </div>
+
+    <div class="about-block single">
+      <div class="about-text">
+        <div class="label">You might also know us from</div>
+        <ul class="known">
+          <li><span class="label">Keynote</span><em>Truth Over Fiction: Creativity + Art Within the Real World</em></li>
+          <li><span class="label">Talk</span>Overcoming shame in writing, at [conference name]</li>
+          <li><span class="label">Magazines</span>[Publications Suz has written for]</li>
+          <li><span class="label">Teaching</span>[Where Suz has taught]</li>
+          <li><span class="label">Online</span>suzannemozes.com</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="bridge" style="margin-top:14px">
+      <div class="label">Work with Suz</div>
+      <h3>Bring me the project, not just the block.</h3>
+      <p>Call Forth gets you to the chair. If you want help with the work itself, its shape, the words for it and a path to finish it, let's talk. <em>[30] minutes, on video. [Free.]</em></p>
+      <a class="btn" id="book-about" href="#" target="_blank" rel="noopener" onclick="event.preventDefault();bookConsult('about')">Book a consult</a>
+    </div>
+  </section>
+
+
+  <!-- DAILY LIGHT: shown after a log is saved. Keeps them in the flow: offers another timer. -->
+  <section class="screen" id="s-quote">
+    <div id="quote-stage">
+      <div id="quote-art" aria-hidden="true"></div>
+      <div id="quote-box">
+        <p id="quote-text"></p>
+        <div id="quote-foot">
+          <p id="quote-ask">Would you like to set another timer?</p>
+          <div class="quote-actions">
+            <button class="q-yes" onclick="anotherTimer()">Yes, another timer</button>
+            <button class="q-no" onclick="track('another_timer',{yes:false});go('home')">Not now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OWNER ONLY: INSIGHTS (not shown to users; reached from Suz's admin login in the real app) -->
+  <section class="screen" id="s-insights">
+    <div class="label">Owner view · Only you see this</div>
+    <h1 style="margin:8px 0 6px">How people use Call Forth</h1>
+    <p id="in-totals"></p>
+    <p class="note">Includes sample data until real people arrive. Every row is stored in the database for later analysis.</p>
+    <div class="two" style="margin-top:22px">
+      <div class="card"><div class="label">Blocks chosen most</div><div id="in-blocks"></div></div>
+      <div class="card"><div class="label">Where sessions get to</div><div class="bars" id="in-funnel"></div>
+        <p style="margin:14px 0 0" id="in-start"></p></div>
+    </div>
+    <div class="two" style="margin-top:14px">
+      <div class="card"><div class="label">Studio hours</div><div id="in-breath" style="margin-top:10px"></div></div>
+      <div class="card"><div class="label">"Try something else" picks</div><div id="in-else"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><div class="label">Most common paths</div><div id="in-paths"></div></div>
+    <div class="card" style="margin-top:14px;overflow-x:auto"><div class="label">What gets stored (latest rows)</div>
+      <table class="cmp" style="font-size:.8rem"><tr><th>When</th><th>Person</th><th>Event</th><th>Details</th></tr><tbody id="in-raw"></tbody></table>
+    </div>
+  </section>
+
+  <footer class="site-foot" id="disclaimer">
+    <button class="pill" onclick="go('welcome')">How it works</button>
+    <p class="disclaimer">Call Forth supports a creative practice. It is for information, not medical or mental health advice.</p>
+    <p class="copyright">© 2027 Suzanne Mozes</p>
+  </footer>
+</main>
+
+<nav class="bottom" aria-label="Main">
+  <button data-nav="home" onclick="go('home')">Home</button>
+  <button data-nav="session" onclick="startOrResume()">Session</button>
+  <button data-nav="log" onclick="go('log')">Log</button>
+  <button data-nav="studio" onclick="go('studio')">Studio</button>
+  <button data-nav="suz" onclick="go('suz')">About</button>
+</nav>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="card">
+    <p id="modal-text"></p>
+    <div class="actions" id="modal-actions"><button class="btn" onclick="closeModal()">Close</button></div>
+  </div>
+</div>
+
+<!-- PREVIEW ONLY: not part of the app -->
+<div class="preview-only">
+  <span>Preview: jump to screen</span>
+  <select id="jump" onchange="jump(this.value)">
+    <option value="signin">Sign in</option>
+    <option value="register">Registration</option>
+    <option value="welcome">Welcome</option>
+    <option value="home">Home</option>
+    <option value="s:breathe">Session: Breathe</option>
+    <option value="s:move">Session: Your move</option>
+    <option value="s:else">Session: Try something else</option>
+    <option value="s:flow">Session: Flow timer</option>
+    <option value="s:log">Session: Log it</option>
+    <option value="quote">Daily light (after log)</option>
+    <option value="log">Log and patterns</option>
+    <option value="logf">Log filtered by block (Studio)</option>
+    <option value="studio">Studio (upgrade)</option>
+    <option value="settings">Settings</option>
+    <option value="hours">Studio hours (Studio)</option>
+    <option value="calopen">Tap the calendar link</option>
+    <option value="suz">About</option>
+    <option value="insights">Owner: Insights (only you)</option>
+  </select>
+  <label>Visits <input type="number" id="visits" min="1" value="12" style="width:52px" onchange="state.visits=+this.value;decideConsult();refreshPanels()"></label>
+  <label><input type="checkbox" id="force" onchange="state.forceConsult=this.checked;decideConsult();refreshPanels()"> Show consult this visit</label>
+  <button onclick="newVisit();go('home')" style="font:inherit">Simulate a new sign-on</button>
+  <button onclick="go('quote');renderQuote(1)" style="font:inherit">Next day's light</button>
+  <label><input type="checkbox" id="member" onchange="state.member=this.checked;renderBlocks()"> Preview as Studio member</label>
+  <label>Light <select id="light" onchange="state.lightPreview=this.value;applyLight()"><option value="">Now</option><option value="morning">Morning</option><option value="evening">Evening</option><option value="night">Night (dark room)</option></select></label>
+  <button onclick="state.left=3;renderTimer();" style="font:inherit">End timer in 3 s</button>
+  <button onclick="state.firstEver=true;go('quote')" style="font:inherit">First-ever log's light</button>
+</div>
+
+<script>
+/* SAMPLE CONTENT: Suz replaces all of this with her own words and audio. */
+/* The four core breaths (top:true) are free. The other six live in "More breaths" (Studio).
+   SAMPLE "why" text: Suz to confirm every line and source before launch. */
+const BREATHS = {
+  box: { top:true, name:'Box breath', short:'Box breath', rounds:4,
+    how:'In for four. Hold for four. Out for four. Hold, empty, for four. Four rounds.',
+    pattern:[['In',4],['Hold',4],['Out',4],['Hold',4]], audio:'1:50',
+    why:'When your head is full of chatter, a steady, even rhythm gives your attention one simple thing to hold. Slow, paced breathing is linked to a calmer heart rate and a more settled nervous system, which clears room for the work.',
+    src:'Source: Zaccaro et al. (2018), "How breath-control can change your life: a systematic review on psycho-physiological correlates of slow breathing," Frontiers in Human Neuroscience.' },
+  vagal: { top:true, name:'Vagal nerve breath', short:'Vagal nerve breath', rounds:5,
+    how:'Breathe in through your nose, then take a second short sip of air on top. Let it all out slowly through your mouth, as a long sigh. Five times.',
+    pattern:[['In',2],['Sip',1],['Out',6]], audio:'1:20',
+    why:'This double inhale with a long exhale, sometimes called the physiological sigh, is the quickest brake on a freeze. In a 2023 Stanford study, five minutes a day of this breathing (called cyclic sighing) improved mood more than mindfulness meditation did.',
+    src:'Source: Balban et al. (2023), "Brief structured respiration practices enhance mood and reduce physiological arousal," Cell Reports Medicine.' },
+  lion: { top:true, name:"Lion's breath", short:"Lion's breath", rounds:4,
+    how:'Breathe in deeply through your nose. Then open your mouth wide, stick your tongue out toward your chin, and breathe out hard with a loud "haaa." Four times. Yes, you will feel silly. That is the point.',
+    pattern:[['In',4],['Haaa',3]], audio:'1:00',
+    why:'"I\'m not a real artist" lives in the body as a tight jaw, a held face, a closed throat. Lion\'s breath releases all three on purpose, and feeling a little ridiculous loosens the grip of self-consciousness. It comes from yoga, and there is little formal research on it, so we offer it as a release, not a cure.',
+    src:'Tradition: Simhasana (yoga). [Suz to add a source she trusts.]' },
+  bee: { top:true, name:'Bumble bee hum', short:'Bumble bee hum', rounds:5,
+    how:'Close your eyes. Gently press the soft flap of each ear closed with your index fingers. Breathe in through your nose, then hum low and steady as you breathe out, for as long as is comfortable. Five times.',
+    pattern:[['In',4],['Hum',8]], audio:'1:40',
+    why:'Humming makes your exhale long and slow, and the vibration gives your mind something to listen to besides the critic. Humming also raises nitric oxide in the nose many times over compared with quiet breathing.',
+    src:'Tradition: Bhramari pranayama (yoga). Source: Weitzberg & Lundberg (2002), "Humming greatly increases nasal nitric oxide," American Journal of Respiratory and Critical Care Medicine.' },
+  exhale: { name:'Extended exhale', short:'Extended exhale', rounds:6, how:'In for four. Out slowly for eight. Six rounds.', pattern:[['In',4],['Out',8]], audio:'1:50',
+    why:'A long exhale tells your body it is safe enough to stop bracing. [Suz to confirm.]', src:'Source: Zaccaro et al. (2018), Frontiers in Human Neuroscience. [Suz to confirm.]' },
+  four78: { name:'4-7-8 breath', short:'4-7-8 breath', rounds:4, how:'In through your nose for four. Hold for seven. Out through your mouth, with a whoosh, for eight. Four rounds.', pattern:[['In',4],['Hold',7],['Whoosh',8]], audio:'1:30',
+    why:'The long hold and longer exhale slow a racing mind before a daunting start. [Suz to confirm.]', src:'Popularized by Dr. Andrew Weil. [Suz to add a source she trusts.]' },
+  coherent: { name:'Coherent breathing', short:'Coherent breathing', rounds:6, how:'In for about five and a half seconds, out for about five and a half, with no pause at the top or bottom. Six rounds, or longer.', pattern:[['In',5.5],['Out',5.5]], audio:'2:00',
+    why:'About five to six breaths a minute is the slow pace most studied in breathing research, linked to a steadier heart rhythm and sustained focus. [Suz to confirm.]', src:'Source: Zaccaro et al. (2018), Frontiers in Human Neuroscience.' },
+  nostril: { name:'Alternate nostril', short:'Alternate nostril', rounds:3, how:'Close your right nostril with your thumb; breathe in through the left. Close both. Release the right; breathe out. Breathe in through the right. Close both. Release the left; breathe out. Three rounds.', pattern:[['In · left',4],['Hold',2],['Out · right',4],['In · right',4],['Hold',2],['Out · left',4]], audio:'2:00',
+    why:'The small coordination task pulls scattered attention into the present. [Suz to confirm.]', src:'Tradition: Nadi shodhana (yoga). [Suz to add a source she trusts.]' },
+  belly: { name:'Belly breathing', short:'Belly breathing', rounds:6, how:'One hand on your chest, one on your belly. Breathe in slowly through your nose so your belly rises and your chest stays still. Breathe out gently. Six rounds.', pattern:[['In',4],['Out',6]], audio:'1:40',
+    why:'Moving from shallow chest breaths to slow belly breaths helps break the feedback loop of panic. [Suz to confirm.]', src:'[Suz to add a source she trusts.]' },
+  somatic: { name:'Somatic release', short:'Somatic release', rounds:10, how:'Ten slow breaths. On each exhale, let one thing go: drop your shoulders, unclench your hands, soften your brow. Silently name where you feel the tension.', pattern:[['In',4],['Release',6]], audio:'2:30',
+    why:'Naming where resistance sits in your body lets you notice it without obeying it. [Suz to confirm.]', src:'[Suz to add a source she trusts.]' },
+};
+const BLOCKS = [
+  { id:'teeth', q:"I'd rather pull my teeth out", free:true,
+    breath:'box',
+    move:"Set the timer for five minutes. Open the file. Make the smallest, worst version of the next bit. You're allowed to stop at five." ,
+    alt:"Tell someone, out loud or in a text, the one thing you'll do in the next ten minutes. Then do only that." },
+  { id:'blank', q:"I'm afraid of the white, blank space", free:true,
+    breath:'vagal',
+    move:"Spoil the blank first. Write one sentence you know is wrong, or make one deliberately ugly mark. Now it isn't blank, and the pressure is off.",
+    alt:"Start in the middle. Skip the opening entirely and make the part you can already see." },
+  { id:'next', q:"I don't know what comes next", free:true,
+    breath:'box',
+    move:"Write three possible next moves, one line each. Pick the one that scares you a little. Do only that.",
+    alt:"Go back to the last part that felt alive. Write down what it wanted. The next step is usually hiding there." },
+  { id:'real', q:"I'm not a real artist", free:false,
+    breath:'lion',
+    move:"For ten minutes, work as the project's devoted assistant, not its author. Assistants don't have to be geniuses. They just show up.", alt:'[Suz to add.]' },
+  { id:'mood', q:"I'm not in the mood", free:false,
+    breath:'lion',
+    move:"Work on the part you'd least mind doing. Mood often follows action, not the other way round.", alt:'[Suz to add.]' },
+  { id:'tired', q:"I'm exhausted", free:false,
+    breath:'bee',
+    move:"Don't make anything new. Reread one page, or look at one piece, and mark the single thing that's most alive.", alt:'[Suz to add.]' },
+  { id:'over', q:"I'm overstimulated", free:false,
+    breath:'bee',
+    move:"Shrink the world. Close every tab, silence your phone, put on headphones or earplugs, and work on one small corner of the piece for ten minutes.",
+    alt:"Turn the lights down and work by one lamp. Less light, less noise, one thing." },
+  { id:'under', q:"I'm understimulated", free:false,
+    breath:'lion',
+    move:"Give yourself a strange rule: ten minutes, only three colors, or a hundred words without the letter e. Constraints wake the brain up.",
+    alt:"Change rooms, stand up to work, and set a timer for seven minutes. Race it." },
+];
+const SOON = ["My inner critic is too loud","I have too many other things to do","What's the point?"];
+/* "Try something else" pool. Each option lists the blocks it suits; the page offers two at a time.
+   SAMPLE content: Suz to write and record. studio:true = Studio members only. */
+const OPTIONS = {
+  prompt:   { title:'Another prompt', why:'A different way in', mins:'', kind:'mind', studio:false, fits:['teeth','blank','next','real','mood','tired','over','under'] },
+  pep:      { title:'Pep talk', why:'A few words from Suz', mins:'2:10', kind:'mind', audio:true, studio:true, fits:['teeth','real','mood','under'],
+              body:"\"{PRACTICE} The critic sounds like good taste, but taste is what makes your work worth making. Let it come along. It just doesn't get to drive for the next fifteen minutes.\"" },
+  lecture:  { title:'Mini lecture', why:'How this part of the work works', mins:'2:40', kind:'mind', audio:true, studio:true, fits:['next','blank','real'],
+              body:'Why first drafts are supposed to be bad. Drafting and judging use different kinds of attention. Doing both at once is like driving with the brake on.' },
+  med:      { title:'Meditation', why:'One quiet minute', mins:'1:00', kind:'mind', audio:true, studio:true, fits:['tired','blank','over'],
+              body:'Close your eyes or soften your gaze. Feel your feet on the floor and the weight of your hands. Notice three sounds in the room.' },
+  visual:   { title:'Visualization', why:'To still the mind and come into the present', mins:'2:00', kind:'mind', audio:true, studio:true, fits:['blank','next','mood','over'],
+              body:'Picture the room where your finished work hangs. Walk up to it. Notice the light, the frame, one detail you love. Then come back to this room, and make the first part of it.' },
+  tapping:  { title:'Tapping', why:'For an anxious mind', mins:'2:00', kind:'body', audio:true, studio:true, fits:['blank','teeth','real','over'],
+              body:'With two fingers, tap gently on the side of your hand, then your eyebrow, the side of your eye, under your eye, under your nose, your chin, your collarbone. Say what you feel out loud as you go: "I\'m scared of this page, and I\'m still here."' },
+  exercise: { title:'Exercise reset', why:'To lift your energy', mins:'1:00', kind:'body', studio:false, fits:['tired','mood','teeth','under'],
+              body:'Stand up. Thirty seconds of jumping jacks or marching in place, as fast as feels good. Shake out your hands. Sit back down while your heart is still up.' },
+  mantra:   { title:'Mantra', why:'To be here, now', mins:'1:00', kind:'mind', audio:true, studio:false, fits:['blank','next','mood','over'],
+              body:'Breathe in: "I am here." Breathe out: "The work is here." Ten times, slowly. Then begin while the words are still in your mouth.' },
+  object:   { title:'Art object', why:'For the inspiration you want', mins:'3:00', kind:'mind', studio:true, fits:['mood','next','real','under'],
+              body:'Find one object near you that has the feeling you want your work to have: a mug, a stone, a book cover. Look at it for one full minute. Then make one mark or one sentence with that feeling in it.' },
+  sunlight: { title:'Sunlight', why:'To wake up, or calm down', mins:'5:00', kind:'body', studio:true, fits:['tired','mood','under'],
+              body:'Go to a window or step outside. Let daylight reach your eyes (never look straight at the sun) for two to five minutes. Come back and start before you check your phone.' },
+  cold:     { title:'Cold shower', why:'To reset your system fast', mins:'1:00', kind:'body', studio:true, fits:['teeth','tired','mood','under'],
+              body:'Finish a shower with 30 seconds of cold water, or splash cold water on your face and wrists. Breathe slowly through it. Then go straight to the work. If you have a heart condition or any health concerns, skip this one.' },
+  shavasana:{ title:'Shavasana', why:'To feel safe', mins:'3:00', kind:'body', audio:true, studio:true, fits:['blank','tired','real','over'],
+              body:'Lie on your back, arms by your sides, palms up. Let the floor hold all of you. Stay for three minutes. When you get up, take that steadiness to the work.' },
+  affirm:   { title:'Affirmation', why:'To remember who you are', mins:'1:00', kind:'mind', studio:true, fits:['real','blank'],
+              body:'Write one true sentence about yourself as a maker, something you know you have done: "I have finished hard things before." "People have been moved by my work." Read it out loud once. Then begin.' },
+  dog:      { title:'Downward dog', why:'To energize', mins:'1:00', kind:'body', studio:true, fits:['tired','mood','teeth','under'],
+              body:'Hands and feet on the floor, hips high, like an upside-down V. Pedal your heels. Breathe here for five slow breaths. Come up slowly. Skip it if anything hurts.' },
+};
+
+
+const state = { daysThisMonth: 11, timerView:'clock', hours:{days:[], time:'09:00', len:15, email:true, set:false}, hoursOffered:false, member:false, showNumbers:true, showHistory:true, useAudio:true, sound:'Silence', name:'Maya', disciplines:['writing'], customTags:[], practiced:'12 years', visits:12, consultMonth:null, consultThisVisit:false, forceConsult:false, block:null, step:'breathe', len:15, left:15*60, running:false, tid:null, btid:null, breathing:false,
+  log:[
+    { when:'Yesterday', block:'teeth', mins:15, breath:'box', tried:'move', felt:'helped', what:'Finally opened the essay. 400 words, half of them good.' },
+    { when:'Monday', block:'blank', mins:25, breath:'vagal', tried:'move', felt:'helped', what:'Three ugly sketches, then one I like.' },
+    { when:'Sunday', block:'teeth', mins:5, breath:'bee', tried:'pep', felt:'little', what:'Five minutes. Counts.' },
+    { when:'Last Thursday', block:'next', mins:15, breath:'box', tried:'move', felt:'helped', what:'Listed three ways the chapter could end. Chose the scary one.' },
+    { when:'Last Tuesday', block:'teeth', mins:15, breath:'box', tried:'prompt', felt:'helped', what:'Rewrote the opening paragraph.' },
+    { when:'Two weeks ago', block:'teeth', mins:5, breath:'vagal', tried:'move', felt:'not', what:'Stared at it. Wrote one line.' },
+  ]};
+
+const $ = id => document.getElementById(id);
+const READY = { id:'ready', q:'Nothing in the way', breath:'box', move:'' };
+const blockById = id => id === 'ready' ? READY : BLOCKS.find(b => b.id === id);
+
+function go(name){
+  if (['studio','suz','log','home'].includes(name)) track('screen_viewed',{screen: name==='suz'?'about':name});
+  stopTimers();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  $('s-'+name).classList.add('on');
+  document.body.classList.toggle('chrome-hidden', ['signin','register','quote'].includes(name));
+  document.body.classList.toggle('focus', name === 'session'); keepAwake(name === 'session'); if (name !== 'session') document.body.classList.remove('barview');
+  if (name !== 'session') cancelCountdown();
+  document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === name));
+  $('disclaimer').style.display = name === 'quote' ? 'none' : 'block';
+  if (name === 'quote') renderQuote();
+  if (name === 'home') renderBlocks();
+  if (name === 'register') renderDisc();
+  if (name === 'hours') renderHours();
+  if (name === 'settings') renderSettings(); else state.backFrom = ['home','log'].includes(name) ? name : state.backFrom;
+  if (name === 'insights') renderInsights();
+  refreshPanels();
+  if (name === 'log') renderLog();
+  window.scrollTo(0,0);
+}
+/* Broad categories, multi-select. "noun" is used in encouraging lines when only one is chosen. */
+const DISCIPLINES = [
+  { id:'visual', name:'Visual & Fine Arts', noun:'art' },
+  { id:'digital', name:'Digital, Tech & Interactive', noun:'digital work' },
+  { id:'writing', name:'Writing & Storytelling', noun:'writing' },
+  { id:'design', name:'Design & Spatial Arts', noun:'design work' },
+  { id:'fiber', name:'Fiber, Tactile & Textile Arts', noun:'fiber work' },
+  { id:'music', name:'Music & Audio', noun:'music' },
+  { id:'lens', name:'Lens, Film & Time-based Media', noun:'lens work' },
+  { id:'performance', name:'Performance & Movement', noun:'performance work' },
+  { id:'culinary', name:'Culinary & Sensory Arts', noun:'culinary art' },
+  { id:'custom', name:'Custom', noun:null },
+];
+/* Muted gallery tones, one per discipline, in the order the categories appear */
+const CHIPS = ['#B5654A','#4F6475','#8A5A2B','#8A9A6E','#B88482','#2E8A7E','#2F4A6B','#6E4A63','#C2913A','#6F6A3A'];
+function renderDisc(){
+  $('disc-chips').innerHTML = DISCIPLINES.map((d, i) => {
+    const on = state.disciplines.includes(d.id);
+    return `<button class="disc${on?' on':''}" style="--s:${CHIPS[i % CHIPS.length]}" aria-pressed="${on}" onclick="toggleDisc('${d.id}')"><span class="sw"></span><span class="box"></span>${d.name}</button>`;
+  }).join('');
+  $('custom-wrap').style.display = state.disciplines.includes('custom') ? 'block' : 'none';
+  $('custom-tags').innerHTML = state.customTags.map((tg,i) => `<span class="chip on">${tg}<button class="tag-x" style="color:var(--wall);background:none;border:0;padding:0 0 0 6px;text-decoration:none" onclick="removeTag(${i})" aria-label="Remove ${tg}">×</button></span>`).join('');
+  const one = practiceNoun();
+  $('r-years-label').textContent = one ? `How long have you been practicing your ${one}?` : 'How long have you been creating?';
+}
+function toggleDisc(id){
+  const i = state.disciplines.indexOf(id);
+  i >= 0 ? state.disciplines.splice(i,1) : state.disciplines.push(id);
+  renderDisc();
+}
+function addTag(){
+  const v = $('r-custom').value.trim().toLowerCase();
+  if (v && !state.customTags.includes(v)) state.customTags.push(v);
+  $('r-custom').value = ''; renderDisc();
+}
+function removeTag(i){ state.customTags.splice(i,1); renderDisc(); }
+/* One category (or one custom tag) gets its own noun; several get "creating". */
+function practiceNoun(){
+  const cats = state.disciplines.filter(d => d !== 'custom');
+  const tags = state.disciplines.includes('custom') ? state.customTags : [];
+  if (cats.length + tags.length !== 1) return null;
+  return cats.length ? DISCIPLINES.find(d => d.id === cats[0]).noun : tags[0];
+}
+/* "You've been at your writing for 12 years" / "You've been creating since college" */
+function practiceLine(){
+  const p = state.practiced.trim(); if (!p) return '';
+  const n = practiceNoun(), since = /^since\b/i.test(p);
+  const lead = n ? `You've been at your ${n}` : `You've been creating`;
+  return since ? `${lead} ${p}.` : `${lead} for ${p}.`;
+}
+function regNumbers(v, el){ state.showNumbers = v; document.querySelectorAll('#reg-numbers .chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+function setPref(key, val){ state[key] = val; track('settings_changed',{[key]: val}); renderSettings(); }
+function renderSettings(){
+  $('hours-line').textContent = !state.member ? 'Set regular times and get a reminder that opens your session. With the full studio.'
+    : state.hours.set ? hoursSummary() : 'Set regular times. Your calendar reminds you, and one tap opens your session.';
+  $('hours-btn').textContent = state.member ? (state.hours.set ? 'Change' : 'Set') : 'Full studio';
+  $('sw-numbers').setAttribute('aria-checked', state.showNumbers); $('sw-history').setAttribute('aria-checked', state.showHistory);
+}
+function signIn(){ state.visits++; decideConsult(); newVisit(); go('register'); }
+function register(){
+  state.name = $('r-name').value.trim() || 'friend';
+  if ($('r-custom').value.trim()) addTag();
+  track('registered',{categories:state.disciplines.filter(d=>d!=='custom'), custom_tags:state.customTags});
+  /* Custom tags are saved so Suz can review popular ones and add them as categories. */
+  state.practiced = $('r-years').value.trim();
+  $('welcome-name').textContent = `Welcome, ${state.name}`;
+  go('welcome');
+}
+/* Consult invitation: never before 10 visits; after that, at most once per calendar month, on a random visit (about 1 in 4). Decided once per visit. */
+function decideConsult(){
+  const month = new Date().toISOString().slice(0,7);
+  if (state.forceConsult) { state.consultThisVisit = true; return; }
+  state.consultThisVisit = state.visits >= 10 && state.consultMonth !== month && Math.random() < 0.25;
+  if (state.consultThisVisit) state.consultMonth = month;
+}
+function refreshPanels(){ if (state.consultThisVisit && !state.consultLogged) { track('consult_shown',{visit:state.visits}); state.consultLogged = true; }
+  document.querySelectorAll('.consult-panel').forEach(p => p.style.display = state.consultThisVisit ? 'block' : 'none'); }
+
+function renderEcho(){
+  const notes = state.log.filter(e => e.what && e.what !== 'Showed up. Counts.');
+  const show = state.showHistory && notes.length && state.visits % 3 === 0;
+  $('echo').style.display = show ? 'block' : 'none'; if (!show) return;
+  const e = notes[(state.visits/3) % notes.length | 0];
+  $('echo').innerHTML = `"${e.what.replace(/</g,'&lt;')}" <span class="who">You, ${e.when.toLowerCase()}</span>`;
+}
+function renderBlocks(){
+  if (!state.greeting) newVisit(true);
+  renderEcho();
+  $('hello-name').textContent = state.greeting.replace('{n}', state.name);
+  $('home-q').textContent = state.question;
+  const wrap = $('blocks'); wrap.innerHTML = '';
+  BLOCKS.forEach(b => {
+    const open = b.free || state.member;
+    const el = document.createElement('button');
+    el.className = 'blk' + (open ? '' : ' locked');
+    el.innerHTML = `<span class="q">${b.q}</span>${b.free ? '' : `<span class="meta label">${open ? 'Studio' : 'Full studio'}</span>`}`;
+    el.onclick = () => { if (open) startSession(b.id); else { track('locked_block_tapped',{block:b.id}); go('studio'); } };
+    wrap.appendChild(el);
+  });
+
+}
+
+function startOrResume(){ state.block ? (go('session'), setStep(state.step)) : startSession('teeth'); }
+function startSession(id){
+  state.sid = 's' + Date.now().toString(36); track('block_chosen',{block:id});
+  state.block = id; state.tried = 'move'; state.felt = null; state.blockAt = Date.now(); go('session');
+  const b = blockById(id);
+  setBreath(chooseBreath(id));
+  renderLastTime(id);
+  $('move-text').textContent = b.move;
+  state.offered = [];
+  
+  $('log-text').value = '';
+  state.left = state.len*60; renderTimer();
+  setStep('breathe');
+}
+function setStep(step){
+  if (state.block) track('step_reached',{step, secs: state.blockAt ? Math.round((Date.now()-state.blockAt)/1000) : null});
+  if (step !== 'breathe') stopBreath();
+  if (step !== 'flow') stopTimer();
+  state.step = step;
+  ['breathe','move','else','flow','log'].forEach(s => { const el = $('step-'+s); el.style.display = s===step ? 'block' : 'none'; el.classList.remove('step-in'); if (s===step) { void el.offsetWidth; el.classList.add('step-in'); } });
+  if (step === 'breathe') autoBreath(); else cancelCountdown();
+  if (step === 'move') playCue();
+  applyView();
+  if (step === 'else') offerElse();
+  const names = {breathe:'Breathe', move:'Your move', flow:'Make', log:'Log it'};
+  $('crumbs').innerHTML = Object.keys(names).map(k => `<span class="${k===step || (k==='move' && step==='else')?'on':''}">${names[k]}</span>`).join('');
+  window.scrollTo(0,0);
+}
+
+
+/* ===== Usage history =====
+   Every step becomes one row: { at, user, session, event, ...details }.
+   In the real app these rows go to a database (one table/collection called "events").
+   Never stores what people write in their log. */
+const EVENTS = [];
+function track(event, details={}){
+  EVENTS.push({ at: new Date().toISOString(), user: state.uid || 'u_maya', session: state.sid || null, event, ...details });
+}
+/* SAMPLE DATA so the Insights screen has something to show. Not real users. */
+(function seed(){
+  const blocks=['teeth','blank','next','real','mood','tired'], w=[34,22,18,6,9,11];
+  const breaths={teeth:'box',blank:'vagal',next:'box',real:'lion',mood:'lion',tired:'bee'};
+  let r=7; const rnd=()=>{ r=(r*9301+49297)%233280; return r/233280; };
+  const pick=(arr,ws)=>{ let x=rnd()*ws.reduce((a,b)=>a+b,0); for(let i=0;i<arr.length;i++){ x-=ws[i]; if(x<=0) return arr[i]; } return arr[0]; };
+  for (let s=0; s<160; s++){
+    const user='u_'+(1+Math.floor(rnd()*48)), session='seed'+s, day=new Date(Date.now()-rnd()*28*864e5).toISOString();
+    const add=(event,d={})=>EVENTS.push({at:day,user,session,event,...d,sample:true});
+    const b=pick(blocks,w); add('block_chosen',{block:b});
+    add('step_reached',{step:'breathe'});
+    if (rnd()<.15) continue;
+    add('breath_started',{breath:breaths[b]});
+    const tMove=Math.round(55+rnd()*45); add('step_reached',{step:'move',secs:tMove});
+    if (rnd()<.35) add('something_else',{option:pick(['pep','prompt','lecture','med','visual','tapping','exercise','mantra','object','sunlight','cold','shavasana','affirm','dog'],[4,3,2,3,3,2,3,2,2,2,1,2,2,2])});
+    if (rnd()<.12) continue;
+    const tFlow=tMove+Math.round(10+rnd()*60); add('step_reached',{step:'flow',secs:tFlow}); add('timer_started',{minutes:pick([5,15,25],[3,5,2]), secs_to_start: tFlow});
+    if (rnd()<.18) continue;
+    add('timer_finished',{}); add('step_reached',{step:'log'});
+    if (rnd()<.8) add('log_saved',{wrote_note:rnd()<.7});
+  }
+  for (let k=0; k<23; k++) EVENTS.push({at:new Date(Date.now()-rnd()*28*864e5).toISOString(),user:'u_'+(1+Math.floor(rnd()*48)),session:'rd'+k,event:'straight_to_making',sample:true});
+  for (let u=1; u<=14; u++){ const user='u_'+u, at=new Date(Date.now()-rnd()*28*864e5).toISOString();
+    EVENTS.push({at,user,session:null,event:'hours_set',calendar:pick(['google','apple','outlook'],[6,4,1]),sample:true});
+    for (let k=0; k<9; k++){ EVENTS.push({at,user,session:null,event:'scheduled_slot',sample:true});
+      if (rnd()<.62) EVENTS.push({at,user,session:null,event:'scheduled_open',from:rnd()<.78?'calendar':'email',sample:true}); } }
+})();
+
+function countBy(list, key){ const c={}; list.forEach(e=>{ const k=e[key]; if(k!==undefined) c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1]); }
+function barRows(rows, label){ const max=Math.max(1,...rows.map(r=>r[1]));
+  return `<div class="bars">${rows.map(([k,n])=>`<div class="row"><span>${label(k)}</span><span>${n}</span><div class="track"><div class="fill" style="width:${n/max*100}%"></div></div></div>`).join('')}</div>`; }
+function renderInsights(){
+  const chosen=EVENTS.filter(e=>e.event==='block_chosen');
+  const bName=id=>(blockById(id)||{q:id}).q;
+  $('in-blocks').innerHTML = barRows(countBy(chosen,'block'), bName);
+  const sessions=new Set(chosen.map(e=>e.session)).size, users=new Set(EVENTS.map(e=>e.user)).size;
+  $('in-totals').innerHTML = `<b>${sessions}</b> sessions · <b>${users}</b> people · <b>${EVENTS.length}</b> events recorded`;
+  const stepN=s=>new Set(EVENTS.filter(e=>e.event==='step_reached'&&e.step===s).map(e=>e.session)).size;
+  const logged=new Set(EVENTS.filter(e=>e.event==='log_saved').map(e=>e.session)).size;
+  const funnel=[['Chose a block',sessions],['Breathed',stepN('breathe')],['Took their move',stepN('move')],['Started making',stepN('flow')],['Finished the timer',stepN('log')],['Saved a log',logged]];
+  $('in-funnel').innerHTML = funnel.map(([k,n])=>`<div class="row"><span>${k}</span><span>${Math.round(n/Math.max(1,sessions)*100)}%</span><div class="track"><div class="fill" style="width:${n/Math.max(1,sessions)*100}%"></div></div></div>`).join('');
+  const st=EVENTS.filter(e=>e.event==='timer_started'&&e.secs_to_start!=null).map(e=>e.secs_to_start).sort((a,b)=>a-b);
+  const med=st.length?st[Math.floor(st.length/2)]:0;
+  const medOf=a=>{ a=a.filter(x=>x!=null).sort((x,y)=>x-y); return a.length?a[Math.floor(a.length/2)]:null; };
+  const fmt=s=>s==null?'–':(s>=60?`${Math.floor(s/60)} min ${s%60} s`:`${s} s`);
+  const at=st=>medOf(EVENTS.filter(e=>e.event==='step_reached'&&e.step===st).map(e=>e.secs));
+  const ready=EVENTS.filter(e=>e.event==='straight_to_making').length;
+  $('in-start').innerHTML = `Median time from choosing a block to making: <b>${fmt(med)}</b>. Goal: under 2 minutes.<br>Step by step (median time since choosing a block): breath done and move shown at <b>${fmt(at('move'))}</b>, timer running at <b>${fmt(at('flow'))}</b>. A long gap between the two means people hesitate on the move.<br>"Straight to making" used <b>${ready}</b> times.`;
+  const hs=new Set(EVENTS.filter(e=>e.event==='hours_set').map(e=>e.user)).size, slots=EVENTS.filter(e=>e.event==='scheduled_slot').length, opens=EVENTS.filter(e=>e.event==='scheduled_open');
+  $('in-breath').innerHTML = `<p><b>${hs}</b> studio members have set studio hours. Of <b>${slots}</b> scheduled sessions, <b>${opens.length}</b> were opened from a reminder (<b>${Math.round(opens.length/Math.max(1,slots)*100)}%</b>).</p>`
+    + barRows(countBy(opens,'from'), k=>k==='email'?'Opened from the email':'Opened from the calendar');
+  const names=Object.fromEntries(Object.entries(OPTIONS).map(([k,o])=>[k,o.title]));
+  $('in-else').innerHTML = barRows(countBy(EVENTS.filter(e=>e.event==='something_else'),'option'), k=>names[k]);
+  // paths: block + furthest step per session
+  const bySess={}; EVENTS.forEach(e=>{ if(!e.session) return; (bySess[e.session]=bySess[e.session]||[]).push(e); });
+  const order=['breathe','move','flow','log'], short={breathe:'breathe',move:'move',flow:'make',log:'log'};
+  const paths={}; Object.values(bySess).forEach(evs=>{ const b=evs.find(e=>e.event==='block_chosen'); if(!b) return;
+    const steps=order.filter(s=>evs.some(e=>e.event==='step_reached'&&e.step===s));
+    const extra=evs.some(e=>e.event==='something_else')?' (+ something else)':'';
+    const key=`${bName(b.block)} → ${steps.map(s=>short[s]).join(' → ')}${extra}`; paths[key]=(paths[key]||0)+1; });
+  $('in-paths').innerHTML = Object.entries(paths).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,n])=>`<div class="entry"><span class="label">${n} sessions</span><div>${k}</div></div>`).join('');
+  $('in-raw').innerHTML = EVENTS.filter(e=>!e.sample).slice(-12).reverse().concat(EVENTS.slice(0,4)).map(e=>{ const {at,user,session,event,sample,...d}=e;
+    return `<tr><td>${at.slice(0,16).replace('T',' ')}</td><td>${user}</td><td>${event}</td><td>${Object.entries(d).map(([k,v])=>k+': '+(Array.isArray(v)?v.join(', '):v)).join(' · ')}</td></tr>`; }).join('');
+}
+
+/* ===== Rotating greetings and questions: a new pair every sign-on ===== */
+const GREETINGS = [
+  // any time
+  ['any','Hello, {n}'],['any','Hey there, {n}'],['any','Aloha, {n}'],['any','Howdy, {n}'],['any',"How's it hanging, {n}?"],
+  ['any','Welcome back, {n}'],['any','Hiya, {n}'],['any','Well, hello, {n}'],['any','Ciao, {n}'],['any','Bonjour, {n}'],
+  ['any','Hola, {n}'],['any','Salut, {n}'],['any','Greetings, {n}'],['any','Good to see you, {n}'],['any','There you are, {n}'],
+  ['any',"Holymoly, it's {n}"],['any',"Wowzers, look who's here: {n}"],['any',"Oh my goodness, it's {n}"],['any','Back at it, {n}'],
+  ['any','Pull up a chair, {n}'],['any','The studio is open, {n}'],['any','Hey hey, {n}'],
+  // time of day
+  ['morning','Good morning, {n}'],['morning','Rise and make, {n}'],['afternoon','Good afternoon, {n}'],['afternoon','Happy afternoon, {n}'],
+  ['evening','Good evening, {n}'],['evening','Evening, {n}'],['night','Burning the midnight oil, {n}?'],['night','Hello, night owl {n}'],
+];
+const QUESTIONS = [
+  "What's coming up for you today?", "How are you feeling about your practice today?", "What's in the way today?",
+  "What's the hold-up today?", "What's echoing through your brain today?", "Where are you with your work today?",
+  "Ready to do your thing? What's in the way?", "What's the feeling lurking deep in your body?",
+  "Let's check in. How are you doing?", "Where shall we begin?",
+];
+function partOfDay(h = new Date().getHours()){ return h >= 5 && h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 22 ? 'evening' : 'night'; }
+/* Never repeats one of the last 8 greetings, or the last question. */
+/* 7 + 8: the dark room at night (or when the device is dark), and a wall that warms a little through the day */
+function applyLight(){
+  const pv = state.lightPreview, h = new Date().getHours();
+  const part = pv || (h >= 22 || h < 5 ? 'night' : h < 11 ? 'morning' : h >= 17 ? 'evening' : 'midday');
+  const dark = part === 'night' || (!pv && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.body.classList.toggle('dark', dark);
+  document.documentElement.style.setProperty('--wall', dark ? '#1C1C1C' : ({ morning:'#F3F3F0', midday:'#F4F2EE', evening:'#F6EFE5' })[part]);
+}
+const READY_LINES = ["I feel pretty good today.","I'm in a good mood.","No complaints.","I've got oodles of energy.","Let's do this.","I've got this."];
+function newVisit(quiet){
+  applyLight();
+  let ri; do { ri = Math.floor(Math.random()*READY_LINES.length); } while (ri === state.readyIndex && READY_LINES.length > 1);
+  state.readyIndex = ri; const rl = $('ready-line'); if (rl) rl.textContent = READY_LINES[ri];
+  const pod = partOfDay();
+  state.greetHist = state.greetHist || [];
+  const pool = GREETINGS.map((g,i)=>[g,i]).filter(([g,i]) => (g[0]==='any' || g[0]===pod) && !state.greetHist.includes(i));
+  const [g, gi] = pool[Math.floor(Math.random()*pool.length)];
+  state.greetHist = [gi, ...state.greetHist].slice(0, 8);
+  state.greeting = g[1];
+  let qi; do { qi = Math.floor(Math.random()*QUESTIONS.length); } while (qi === state.qIndex);
+  state.qIndex = qi; state.question = QUESTIONS[qi];
+  if (!quiet) track('greeting_shown',{greeting:gi, question:qi});
+}
+
+/* ===== Daily light: a new line every day, with its own colors, type and shapes =====
+   SAMPLE LINES written in Suz's voice: Suz to edit or replace. Add other people's quotes only with a verified source. */
+const QUOTES = [
+  "Done is a color. Paint with it.",
+  "The muse keeps office hours. Yours just started.",
+  "You made something today. The universe is slightly different now. You're welcome, universe.",
+  "Bad first drafts are good drafts in disguise.",
+  "The critic didn't make anything today. You did.",
+  "Small work, done daily, becomes a body of work.",
+  "Today's mess is tomorrow's material.",
+  "You showed up. That's the whole trick, and you did it.",
+  "Nobody remembers the days you didn't feel like it. They remember the work.",
+  "Leave it a little unfinished. Tomorrow-you loves a head start.",
+  "Holymoly. Look at you, making things.",
+  "The page was blank. Was. Past tense.",
+  "Taste is why it hurts. Keep going until your hands catch up.",
+  "One true sentence beats a hundred perfect plans.",
+  "Rest is part of the practice, not a break from it.",
+  "Your weird is the point. Don't sand it off.",
+  "Art is the only way forward, and you just took a step.",
+  "Wowzers. Fifteen minutes ago, this didn't exist.",
+  "Make it badly. Make it better. Make it yours.",
+  "Curiosity is a better boss than fear.",
+  "The work doesn't need you to be ready. It needs you to be here.",
+  "You are allowed to like what you made.",
+  "Momentum is shy. Visit again tomorrow.",
+  "Every artist you admire had a Tuesday like this one.",
+  "What only you can make waited for you. Good.",
+  "Finish the small thing. Then go look at the sky.",
+  "Doubt is a passenger. You're still driving.",
+  "Practice is just love with a schedule.",
+  "Woooohooo. The studio light is still on.",
+  "Your future self just high-fived you.",
+  "Goodness gracious, you did the hard part: you began.",
+];
+const THEMES = [
+  { bg:'#FFD23F', ink:'#1C1C1C', a:'#F2542D', b:'#FFFFFF', font:"'Abril Fatface', serif", style:'', align:'left', art:'sun' },
+  { bg:'#2541B2', ink:'#FFF4E0', a:'#FF8FA3', b:'#FFD23F', font:"'Fraunces', serif", style:'italic', align:'center', art:'blobs' },
+  { bg:'#B8F2E6', ink:'#20304A', a:'#FF6B6B', b:'#2541B2', font:"'Caveat', cursive", style:'', size:1.25, align:'center', art:'squiggles' },
+  { bg:'#F2542D', ink:'#FFF8EC', a:'#FFD23F', b:'#1C1C1C', font:"'Bebas Neue', sans-serif", upper:true, size:1.2, spacing:'.02em', align:'left', art:'confetti' },
+  { bg:'#FFC6D3', ink:'#3A0CA3', a:'#06A77D', b:'#F2542D', font:"'DM Serif Display', serif", style:'', align:'center', art:'moons' },
+  { bg:'#1C1C1C', ink:'#F4F2EE', a:'#FFD23F', b:'#FF8FA3', font:"'Space Grotesk', sans-serif", weight:700, size:.9, align:'left', art:'stars' },
+  { bg:'#06A77D', ink:'#FFFFFF', a:'#FFC6D3', b:'#FFD23F', font:"'Fraunces', serif", weight:700, align:'center', art:'waves' },
+  { bg:'#CDB4DB', ink:'#1C1C1C', a:'#F2542D', b:'#2541B2', font:"'DM Serif Display', serif", style:'italic', align:'left', art:'cutouts' },
+];
+function art(kind, a, b){
+  const W=1200, H=800; let s='';
+  if (kind==='sun') { s = `<g class="sp"><circle cx="1075" cy="125" r="95" fill="${a}"/>${Array.from({length:16},(_,i)=>{const r=i*22.5*Math.PI/180;return `<line x1="${1075+120*Math.cos(r)}" y1="${125+120*Math.sin(r)}" x2="${1075+165*Math.cos(r)}" y2="${125+165*Math.sin(r)}" stroke="${a}" stroke-width="14" stroke-linecap="round"/>`}).join('')}</g><circle class="fl" cx="120" cy="700" r="60" fill="${b}"/>`; }
+  if (kind==='blobs') { s = `<g transform="translate(-50,-60) scale(.75)"><path class="fl" d="M90 120c80-70 230-40 250 60s-60 170-170 160S10 190 90 120z" fill="${a}"/></g><path class="fl2" d="M960 560c90-60 220 10 210 110s-120 140-210 110-90-160 0-220z" fill="${b}"/><circle class="fl" cx="1050" cy="140" r="34" fill="${a}"/>`; }
+  if (kind==='squiggles') { s = `<path class="fl" d="M40 140c60-60 120 60 180 0s120 60 180 0 120 60 180 0" fill="none" stroke="${a}" stroke-width="16" stroke-linecap="round"/><path class="fl2" d="M700 700c60-60 120 60 180 0s120 60 180 0 120 60 180 0" fill="none" stroke="${b}" stroke-width="16" stroke-linecap="round"/><circle class="fl" cx="1080" cy="160" r="46" fill="none" stroke="${a}" stroke-width="12"/>`; }
+  if (kind==='confetti') { let r=3; const rnd=()=>{r=(r*9301+49297)%233280;return r/233280;}; s = Array.from({length:46},(_,i)=>{const x=rnd()*W,y=rnd()*H; if (x>120&&x<1080&&y>170&&y<650) return ''; return i%3? `<circle class="${i%2?'fl':'fl2'}" cx="${x}" cy="${y}" r="${6+rnd()*14}" fill="${i%4?a:b}"/>` : `<rect class="fl" x="${x}" y="${y}" width="26" height="10" rx="5" fill="${b}" transform="rotate(${rnd()*180} ${x} ${y})"/>`; }).join(''); }
+  if (kind==='moons') { s = `<g class="fl"><circle cx="1030" cy="170" r="110" fill="${a}"/><circle cx="1080" cy="140" r="100" fill="var(--qbg)"/></g><g class="fl2"><circle cx="150" cy="660" r="80" fill="${b}"/><circle cx="185" cy="640" r="72" fill="var(--qbg)"/></g><circle class="fl" cx="200" cy="140" r="14" fill="${a}"/><circle class="fl2" cx="1000" cy="680" r="20" fill="${b}"/>`; }
+  if (kind==='stars') { const star=(x,y,r,c,cl)=>`<path class="${cl}" d="M${x} ${y-r}L${x+r*.28} ${y-r*.28}L${x+r} ${y}L${x+r*.28} ${y+r*.28}L${x} ${y+r}L${x-r*.28} ${y+r*.28}L${x-r} ${y}L${x-r*.28} ${y-r*.28}Z" fill="${c}"/>`;
+    s = star(1040,160,70,a,'fl')+star(140,640,46,b,'fl2')+star(1100,640,26,a,'fl2')+star(200,150,22,b,'fl')+star(620,90,14,a,'fl'); }
+  if (kind==='waves') { s = [0,1,2,3].map(i=>`<path class="${i%2?'fl':'fl2'}" d="M0 ${620+i*40} q 75 -40 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0" fill="none" stroke="${i%2?a:b}" stroke-width="12"/>`).join('') + `<circle class="fl" cx="1040" cy="150" r="70" fill="${b}"/>`; }
+  if (kind==='cutouts') { s = `<path class="fl" d="M1000 60c40 60 10 90 50 140s-20 80 10 130c-60-10-90-60-80-120s-30-90 20-150z" fill="${a}"/><path class="fl2" d="M120 560c50 20 60 70 110 80s60 70 40 110c-50-30-60-60-110-70s-70-60-40-120z" fill="${b}"/><path class="fl" d="M1060 600c30 0 40 40 70 40s30 40 0 60-50-10-70-30-30-70 0-70z" fill="${b}"/>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${s}</svg>`;
+}
+/* Another timer: straight back to Make, same block, no breathing step. */
+function anotherTimer(){
+  track('another_timer',{yes:true});
+  state.block = state.lastBlock || 'teeth'; state.tried = 'move'; state.felt = null;
+  state.sid = 's' + Date.now().toString(36);
+  state.blockAt = Date.now(); go('session'); $('log-text').value = '';
+  beginMaking();
+}
+function dayIndex(){ const d=new Date(); return Math.floor((d - new Date(d.getFullYear(),0,0))/864e5); }
+/* 9. The first piece ever saved gets its own line. */
+const FIRST_LIGHT = "You're doing it. Really doing it. You showed up and did the work.";
+function renderQuote(offset){
+  if (offset !== undefined) state.quoteOffset = (state.quoteOffset||0) + offset;
+  const i = dayIndex() + (state.quoteOffset||0);
+  const q = state.firstEver ? FIRST_LIGHT : QUOTES[((i % QUOTES.length)+QUOTES.length)%QUOTES.length], th = THEMES[((i % THEMES.length)+THEMES.length)%THEMES.length];
+  const st = $('quote-stage'); st.style.background = th.bg; st.style.color = th.ink; st.style.setProperty('--qbg', th.bg); st.style.setProperty('--qink', th.ink);
+  $('quote-art').innerHTML = art(th.art, th.a, th.b);
+  const el = $('quote-text'); el.textContent = q;
+  Object.assign(el.style, { fontFamily: th.font, fontStyle: th.style||'normal', fontWeight: th.weight||400, textTransform: th.upper?'uppercase':'none',
+    letterSpacing: th.spacing||'normal', textAlign: th.align, fontSize: `clamp(${2.2*(th.size||1)}rem, ${6.4*(th.size||1)}vw, ${4.8*(th.size||1)}rem)` });
+  $('quote-foot').style.textAlign = th.align; document.querySelector('.quote-actions').style.justifyContent = th.align === 'center' ? 'center' : 'flex-start';
+  const box = $('quote-box'); box.style.animation='none'; void box.offsetWidth; box.style.animation='';
+  track('quote_shown',{quote: state.firstEver ? 'first' : i % QUOTES.length, theme:th.art}); state.firstEver = false;
+}
+
+/* breathing */
+function breathLabel(){ return state.breathStarted ? 'Begin again' : 'Begin breathing'; }
+/* Dawn-to-dusk palette shared by the breathing circle and the timer bar */
+const DUSK = [[0,[233,211,198]],[.3,[227,200,146]],[.55,[185,196,154]],[.78,[141,186,176]],[1,[110,159,174]]];
+function duskColor(p){ p = Math.max(0, Math.min(1, p)); let k = 1; while (k < DUSK.length-1 && DUSK[k][0] < p) k++;
+  const [p0,c0] = DUSK[k-1], [p1,c1] = DUSK[k], f = (p - p0) / (p1 - p0 || 1);
+  return 'rgb(' + c0.map((v,j) => Math.round(v + (c1[j]-v)*f)).join(',') + ')'; }
+/* The breath begins by itself after a gentle 3-second countdown. Pause or Skip are always there. */
+function autoBreath(){
+  cancelCountdown(); state.breathStarted = false; let n = 3;
+  const c = $('circle'); c.style.transitionDuration = '.4s'; c.style.transform = 'scale(.6)';
+  const show = () => { $('circle-word').textContent = n; $('circle-word').classList.add('count'); $('breath-count').textContent = `Breathing with you in ${n}…`; };
+  show(); $('breath-btn').textContent = 'Pause'; state.counting = true;
+  state.cdid = setInterval(() => { n--; if (n > 0) { show(); return; } cancelCountdown(); state.breathStarted = true;
+    track('breath_started',{breath:state.breath, auto:true}); $('audio-fill').style.width = '0'; startBreath(); $('breath-btn').textContent = 'Pause'; }, 1000);
+}
+function cancelCountdown(){ clearInterval(state.cdid); $('circle-word').classList.remove('count'); if (state.counting) { state.counting = false; $('circle-word').textContent = 'Ready'; $('breath-count').textContent = 'About 60 to 90 seconds'; $('breath-btn').textContent = breathLabel(); } }
+/* Keep the screen awake during a session, so it never dims mid-breath or mid-making. */
+async function keepAwake(on){
+  try { if (on && 'wakeLock' in navigator && !state.wake) { state.wake = await navigator.wakeLock.request('screen'); }
+        if (!on && state.wake) { await state.wake.release(); state.wake = null; } } catch(e) { state.wake = null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('focus')) { state.wake = null; keepAwake(true); } });
+/* Your move: show the cue, then hand over to the prompt (CSS does the timing). */
+function playCue(){ const s = $('move-swap'); s.classList.remove('play','done'); void s.offsetWidth; s.classList.add('play');
+  clearTimeout(state.cueT); state.cueT = setTimeout(cueDone, 4300); }
+function cueDone(){ clearTimeout(state.cueT); const s = $('move-swap'); s.classList.remove('play'); s.classList.add('done'); }
+/* For days they arrive ready: no block, no breath, straight to the timer at their usual length. */
+function straightToMaking(){
+  state.sid = 's' + Date.now().toString(36); track('straight_to_making',{line: state.readyIndex});
+  state.block = 'ready'; state.tried = 'straight'; state.breath = null; state.felt = null; state.blockAt = Date.now();
+  $('log-text').value = ''; go('session'); beginMaking();
+}
+function toggleBreath(){
+  if (state.counting) { cancelCountdown(); return; }
+  if (state.breathing) { stopBreath(); return; }
+  state.breathStarted = true;
+  track('breath_started',{breath:state.breath});
+  $('audio-fill').style.width = '0';
+  startBreath(); $('breath-btn').textContent = 'Pause';
+}
+function startBreath(){
+  const pat = BREATHS[state.breath].pattern; let i = 0, rounds = 0;
+  state.breathing = true;
+  const tick = () => {
+    const [word, secs] = pat[i];
+    $('circle-word').textContent = word;
+    const c = $('circle'); c.style.transitionDuration = secs + 's';
+    c.style.backgroundColor = duskColor((rounds + i/pat.length) / (BREATHS[state.breath].rounds || 6));
+    c.style.transform = word === 'Sip' ? 'scale(1.05)' : word.startsWith('In') ? 'scale(.95)' : word === 'Hold' ? c.style.transform : 'scale(.6)';
+    i = (i+1) % pat.length; if (i === 0) { rounds++; $('breath-count').textContent = `Round ${rounds} done`; $('audio-fill').style.width = (rounds/(BREATHS[state.breath].rounds||6)*100)+'%'; }
+    if (rounds >= (BREATHS[state.breath].rounds || 6)) { stopBreath(); $('circle-word').textContent = 'Done'; setTimeout(()=>{ if(state.step==='breathe') setStep('move'); }, 1200); return; }
+    state.btid = setTimeout(tick, secs*1000);
+  };
+  tick();
+}
+function stopBreath(){ state.breathing = false; clearTimeout(state.btid); if (state.breath) $('breath-btn').textContent = breathLabel(); }
+/* One breath per session. Studio members get the breath that has helped them most for this block; everyone else gets the block's breath. */
+function chooseBreath(block){
+  const fallback = blockById(block).breath;
+  if (!state.member || !state.showHistory) return fallback;
+  const w = whatWorked(block);
+  return (w.good.length && w.breath && BREATHS[w.breath[0]]) ? w.breath[0] : fallback;
+}
+function setBreath(id){
+  state.breath = id; stopBreath(); const br = BREATHS[id];
+  $('breath-title').textContent = br.name;
+  const used = state.log.filter(e => e.breath === id).length, folded = used >= 3;
+  $('breath-how').textContent = br.how; $('breath-how-2').textContent = br.how;
+  $('breath-how').style.display = folded ? 'none' : 'block'; $('breath-how-fold').style.display = folded ? 'block' : 'none'; $('breath-how-fold').open = false;
+  $('breath-why').textContent = br.why; $('breath-src').textContent = br.src;
+  $('audio-fill').style.width = '0';
+  $('circle-word').textContent = 'Ready'; $('circle').style.transform = 'scale(.6)'; $('circle').style.backgroundColor = ''; $('breath-count').textContent = 'About 60 to 90 seconds';
+  $('breath-btn').textContent = breathLabel();
+}
+
+/* try something else */
+function offerElse(){
+  state.offered = state.offered || [];
+  $('else-detail').innerHTML = '';
+  const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  const pool = Object.keys(OPTIONS).filter(k => state.member || !OPTIONS[k].studio);
+  const fresh = pool.filter(k => !state.offered.includes(k));
+  const src = fresh.length >= 2 ? fresh : pool;
+  const fit = src.filter(k => OPTIONS[k].fits.includes(state.block)), rest = src.filter(k => !fit.includes(k));
+  const ordered = [...shuffle(fit), ...shuffle(rest)];
+  const mind = ordered.find(k => OPTIONS[k].kind === 'mind'), body = ordered.find(k => OPTIONS[k].kind === 'body');
+  const picks = (mind && body) ? shuffle([mind, body]) : ordered.slice(0,2);
+  state.offered.push(...picks);
+  track('something_else_offered',{options:picks});
+  $('else-choices').innerHTML = picks.map(k => { const o = OPTIONS[k];
+    return `<button class="choice" onclick="pickElse('${k}')"><span class="label">${o.mins? o.mins + (o.audio?' · with Suz':'') : 'Sample'}</span>
+      <span class="t">${o.title}</span><span class="w">${o.why}</span></button>`; }).join('');
+}
+function pickElse(kind){
+  const o = OPTIONS[kind], b = blockById(state.block), locked = o.studio && !state.member;
+  track('something_else',{option:kind, locked});
+  document.querySelectorAll('#else-choices .choice').forEach(c => c.classList.toggle('on', c.getAttribute('onclick').includes(`'${kind}'`)));
+  let html;
+  if (locked) {
+    html = `<div class="card"><div class="label">In the full studio</div><h3 style="margin:8px 0">${o.title}</h3><p>${o.why}. Ten more ways in, many guided by Suz's voice, come with the full studio.</p><button class="btn" onclick="go('studio')">See the studio</button></div>`;
+  } else {
+    state.tried = kind;
+    const body = kind === 'prompt' ? b.alt : o.body.replace('{PRACTICE}', practiceLine() + ' You know how to do this.');
+    html = `<div class="card"><div class="label">${o.title} <span class="sample">Sample</span></div>
+      ${o.audio ? `<div class="audio"><button class="play" onclick="openModal('Audio in Suz\\'s voice plays here. [To record.]')" aria-label="Play">▶</button><span class="track"></span><span class="label" style="color:var(--muted)">${o.mins}</span></div>` : ''}
+      <p style="margin-top:10px${kind==='prompt'?';font-family:var(--h);font-size:1.25rem':''}">${body}</p>
+      <p class="note" style="font-style:normal;margin:10px 0 0">When you're done, get your work open.</p><div class="actions thumb" style="margin-top:8px"><button class="btn" onclick="beginMaking()">My work is open. Start.</button></div></div>`;
+  }
+  $('else-detail').innerHTML = html;
+  $('else-detail').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* timer */
+function setLen(m){ state.len = m; state.left = m*60; renderTimer(); renderTimerPanel(); track('timer_length',{minutes:m}); }
+function setSnd(s){ state.sound = s; renderTimerPanel(); }
+function renderTimerPanel(){
+  document.querySelectorAll('#len-chips .chip').forEach(c => c.classList.toggle('on', +c.dataset.len === state.len));
+  document.querySelectorAll('#snd-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.snd === state.sound));
+  document.querySelectorAll('#view-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.view === currentView()));
+  $('view-chips').style.display = state.showNumbers ? '' : 'none';
+  $('snd-chips').style.display = state.member ? '' : 'none';
+  $('timer-status').textContent = state.member ? `${state.len} min · ${state.sound}` : `${state.len} min`;
+}
+function toggleTimerPanel(){ const p = $('timer-panel'); const open = p.style.display === 'none'; p.style.display = open ? 'block' : 'none'; $('timer-pill').setAttribute('aria-expanded', open); renderTimerPanel(); }
+/* One tap from the move to making: the timer starts at their usual length and sound. */
+function beginMaking(){
+  resetFlowUI(); state.lastMins = null;
+  setStep('flow'); $('timer-panel').style.display = 'none'; renderTimerPanel();
+  state.left = state.len*60; renderTimer(); startTimer();
+}
+function renderTimer(){
+  const secs = state.over ? state.len*60 + state.extra : Math.max(0, state.left), m = Math.floor(secs/60), s = secs%60;
+  $('timer').textContent = `${m}:${String(s).padStart(2,'0')}`; $('timer').classList.toggle('over', !!state.over);
+  const f = $('tbar-fill'); if (f) { const done = state.over ? 1 : 1 - Math.max(0,state.left)/(state.len*60);
+    f.style.width = (done*100) + '%'; f.style.setProperty('--bw', f.parentElement.clientWidth + 'px');
+    const left = Math.ceil(Math.max(0,state.left)/60);
+    $('tbar-cap').textContent = state.over ? 'Still going' : (left <= 1 ? 'Less than a minute left' : `${left} min left`);
+    $('tbar-cap').style.visibility = (state.showNumbers || state.over) ? 'visible' : 'hidden'; }
+}
+/* 1. The timer ends gently: a soft tone, then a choice. Keep going switches to a quiet count-up. */
+function timeUp(){ bell(true); document.body.classList.add('timeup'); $('time-up').style.display = 'block'; $('timer-actions').style.display = 'none'; track('time_up',{minutes:state.len}); }
+function keepGoing(){ track('keep_going',{}); document.body.classList.remove('timeup'); state.over = true; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex';
+  $('over-note').style.display = currentView() === 'bar' ? 'none' : 'block'; startTimer(); }
+function resetFlowUI(){ document.body.classList.remove('timeup'); state.over = false; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex'; $('over-note').style.display = 'none';
+}
+/* 3. One soft bell marks the threshold (and a gentler one at the end). Web Audio, no sound files. */
+function bell(soft){
+  /* A warm singing-bowl tone: low fundamental, two gently beating partials, slow bloom, long fade, softened highs. */
+  try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)());
+    if (ctx.state === 'suspended') ctx.resume();
+    const strike = (when, vol) => { const t0 = ctx.currentTime + when, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.Q.value = .3; lp.connect(ctx.destination);
+      [[220,1],[220.7,.6],[556,.22],[557.1,.15],[1017,.05]].forEach(([f,g]) => { const o = ctx.createOscillator(), v = ctx.createGain(); o.type = 'sine'; o.frequency.value = f;
+        v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(vol*g, t0 + .18); v.gain.exponentialRampToValueAtTime(.0001, t0 + 5.5);
+        o.connect(v).connect(lp); o.start(t0); o.stop(t0 + 5.7); }); };
+    if (soft) { strike(0, .035); strike(1.6, .025); } else strike(0, .045);
+  } catch(e) {}
+}
+/* 2. Clock or bar. People who hide their numbers get the bar. */
+function currentView(){ return state.showNumbers ? state.timerView : 'bar'; }
+function setView(v){ state.timerView = v; track('timer_view',{view:v}); applyView(); renderTimerPanel(); }
+function applyView(){ document.body.classList.toggle('barview', state.step === 'flow' && document.body.classList.contains('focus') && currentView() === 'bar'); renderTimer(); }
+window.addEventListener('resize', () => renderTimer());
+function toggleTimer(){ state.running ? stopTimer() : startTimer(); }
+function startTimer(){ if (state.left === state.len*60 && !state.over) { bell(); }
+  if (state.left === state.len*60) track('timer_started',{minutes:state.len, sound:state.sound, secs_to_start: state.blockAt ? Math.round((Date.now()-state.blockAt)/1000) : null}); state.running = true; $('timer-btn').textContent = 'Pause';
+  state.tid = setInterval(()=>{ if (state.over) { state.extra++; renderTimer(); return; } state.left--; renderTimer(); if (state.left <= 0) { stopTimer(); timeUp(); } }, 1000); }
+function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
+function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
+  track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI(); setStep('log'); }
+function stopTimers(){ stopTimer(); stopBreath(); }
+
+/* log */
+function saveLog(felt){
+  state.felt = felt || null;
+  track('log_saved',{wrote_note: $('log-text').value.trim().length > 0, felt: state.felt, breath: state.breath, tried: state.tried});  /* never the text itself */
+  const mins = state.lastMins || Math.max(1, Math.round((state.len*60 - state.left)/60)) || state.len;
+  state.firstEver = state.log.length === 0; if (!state.loggedToday) { state.daysThisMonth++; state.loggedToday = true; }
+  state.log.unshift({ when:'Today', block:state.block, mins, breath:state.breath, tried:state.tried, felt:state.felt, what: $('log-text').value.trim() || 'Showed up. Counts.' });
+  state.lastBlock = state.block; state.block = null; go('quote');
+}
+function skipLog(){ track('log_skipped',{}); state.lastBlock = state.block; state.block = null; go('quote'); }
+/* Log headline: a different one each time the Log opens, never the same twice in a row. */
+const LOG_HEADLINES = [
+  "Take a second to appreciate how far you've come.",
+  "Look at you go.",
+  "You've come a long way.",
+  "Look at the momentum you've started.",
+  "Baby steps.",
+  "You're building self-trust just by showing up.",
+  "Give yourself credit for putting in the work.",
+  "Your future self is so proud of where you are right now.",
+  "Progress looks good on you, {n}.",
+  "You're doing it.",
+];
+const TRIED = Object.assign({ move:'Your move', straight:'Straight to making' }, Object.fromEntries(Object.entries(OPTIONS).map(([k,o])=>[k,o.title])));
+const FELT = { helped:'It helped', little:'A little', not:'Not today' };
+function entryDetail(e){
+  return [e.breath && BREATHS[e.breath] ? BREATHS[e.breath].short : null, e.tried ? TRIED[e.tried] : null, e.felt ? FELT[e.felt] : null].filter(Boolean).join(' · ');
+}
+/* What worked for one block: the breath and step that most often "helped" (falls back to all entries if none rated). */
+function whatWorked(block){
+  const all = state.log.filter(e => e.block === block);
+  const good = all.filter(e => e.felt === 'helped'); const base = good.length ? good : all;
+  const top = key => { const c={}; base.forEach(e=>{ if(e[key]) c[e[key]]=(c[e[key]]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; };
+  return { all, good, breath: top('breath'), tried: top('tried'), last: all[0] };
+}
+function renderLastTime(id){
+  const w = whatWorked(id);
+  $('last-line').textContent = (state.member && state.showHistory && w.good.length && w.breath) ? `Last time, the ${BREATHS[w.breath[0]].short.toLowerCase()} helped.` : '';
+}
+function filterLog(block){ state.logFilter = block; track('log_filtered',{block: block || 'all'}); renderLog(true); }
+function renderLog(keepHeadline){
+  $('hours-invite').style.display = (state.member && !state.hours.set && !state.hoursOffered && state.log.length >= 3) ? 'block' : 'none';
+  if (keepHeadline === true) return renderLogBody();
+
+  let hi; do { hi = Math.floor(Math.random()*LOG_HEADLINES.length); } while (hi === state.logH);
+  state.logH = hi; $('log-h').textContent = LOG_HEADLINES[hi].replace('{n}', state.name);
+  if (!state.showHistory) $('log-h').textContent = 'Your log, resting.';
+  const list = state.member ? state.log : state.log.slice(0,3);
+  $('entries').innerHTML = list.map(e => `<div class="entry"><div class="label when">${e.when} · ${blockById(e.block).q}${state.showNumbers?' · '+e.mins+' min':''}</div><div class="what">${e.what}</div></div>`).join('')
+    + (state.member ? '' : `<div class="entry"><p class="note">Your full history and patterns come with the full studio. <br><button class="quiet" style="font-style:normal" onclick="go('studio')">See the studio <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></p></div>`);
+  const counts = {}; state.log.forEach(e => counts[e.block] = (counts[e.block]||0)+1);
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  $('pattern-line').innerHTML = `You've walked through <em>"${blockById(top[0]).q}"</em> ${top[1]} times this month.`;
+  const max = top[1];
+  $('bars').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([id,n]) =>
+    `<div class="row"><span>${blockById(id).q}</span><span>${n}</span><div class="track"><div class="fill" style="width:${n/max*100}%"></div></div></div>`).join('');
+  $('log-min').textContent = state.log.reduce((a,e)=>a+e.mins,0);
+  $('log-n').textContent = state.log.length; $('log-days').textContent = state.daysThisMonth;
+  renderLogBody();
+}
+function renderLogBody(){
+  $('gear-hint').style.display = state.showNumbers && state.showHistory ? '' : 'none';
+  $('log-rest').style.display = state.showHistory ? 'none' : 'block';
+  $('log-main').style.display = state.showHistory ? '' : 'none';
+  $('log-total').style.display = state.showNumbers ? '' : 'none';
+  $('bars').style.display = state.showNumbers ? '' : 'none';
+  if (!state.showNumbers) { const c={}; state.log.forEach(e=>c[e.block]=(c[e.block]||0)+1); const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
+    $('pattern-line').innerHTML = top ? `The block you walk through most: <em>"${blockById(top[0]).q}"</em>.` : ''; }
+  const counts = {}; state.log.forEach(e => counts[e.block] = (counts[e.block]||0)+1);
+  const f = state.member ? state.logFilter : null;
+  $('log-filter').innerHTML = `<button class="chip${!f?' on':''}" onclick="${state.member?'filterLog(null)':"go('studio')"}">All</button>` +
+    Object.entries(counts).map(([id,n]) => `<button class="chip${f===id?' on':''}" ${state.member?'':'style="color:var(--muted)"'} onclick="${state.member?`filterLog('${id}')`:"go('studio')"}">${blockById(id).q}${state.showNumbers?' · '+n:''}</button>`).join('');
+  $('filter-note').textContent = state.member ? '' : 'Filter by block, and see what worked, with the full studio.';
+  if (f) {
+    const w = whatWorked(f);
+    $('worked').innerHTML = `<div class="card" style="margin:10px 0 6px">
+      <div class="label">When you felt "${blockById(f).q}"</div>
+      ${state.showNumbers ? `<p style="margin:10px 0 4px">You've been here ${w.all.length} times${w.good.length ? `, and ${w.good.length} of them helped` : ''}.</p>` : '<p style="margin:10px 0 4px">You\'ve been here before, and you got through it.</p>'}
+      ${w.breath ? `<p style="margin:0 0 4px">What helped most: <b>${BREATHS[w.breath[0]].name}</b>${w.tried ? `, then <b>${TRIED[w.tried[0]]}</b>` : ''}.</p>` : ''}
+      <button class="btn" style="margin-top:10px" onclick="startSession('${f}')">Start a session with this block</button></div>`;
+  } else $('worked').innerHTML = '';
+  let list = state.member ? state.log : state.log.slice(0,3);
+  if (f) list = list.filter(e => e.block === f);
+  $('entries').innerHTML = list.map(e => `<div class="entry"><div class="label when">${e.when} · ${blockById(e.block).q}${state.showNumbers?' · '+e.mins+' min':''}</div>
+      ${state.member && entryDetail(e) ? `<div class="note" style="font-style:normal;font-size:.85rem;margin-bottom:2px">${entryDetail(e)}</div>` : ''}
+      <div class="what">${e.what}</div></div>`).join('')
+    + (state.member ? '' : `<div class="entry"><p class="note">Your full history and patterns come with the full studio. <br><button class="quiet" style="font-style:normal" onclick="go('studio')">See the studio <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></p></div>`);
+}
+
+/* ===== Studio hours: the calendar does the reminding ===== */
+const DAYS = [['MO','Mon'],['TU','Tue'],['WE','Wed'],['TH','Thu'],['FR','Fri'],['SA','Sat'],['SU','Sun']];
+const APP_URL = 'https://[callforth app address]';
+function startLink(){ return `${APP_URL}/?start=1&len=${state.hours.len}`; }
+function fmtTime(t){ let [h,m]=t.split(':').map(Number); const ap=h>=12?'pm':'am'; h=h%12||12; return `${h}:${String(m).padStart(2,'0')} ${ap}`; }
+function dayList(){ const d=DAYS.filter(([k])=>state.hours.days.includes(k)).map(x=>x[1]); return d.length===7?'Every day':(d.length===5&&!state.hours.days.some(k=>k==='SA'||k==='SU'))?'Weekdays':d.join(', '); }
+function hoursSummary(){ return `${dayList()} at ${fmtTime(state.hours.time)}, ${state.hours.len} minutes${state.hours.email?', with an email reminder':''}.`; }
+function renderHours(){
+  const h=state.hours;
+  $('hr-days').innerHTML = DAYS.map(([k,n])=>`<button class="chip ${h.days.includes(k)?'on':''}" aria-pressed="${h.days.includes(k)}" onclick="toggleDay('${k}')">${n}</button>`).join('');
+  $('hr-len').innerHTML = [5,15,25].map(l=>`<button class="chip ${h.len===l?'on':''}" onclick="state.hours.len=${l};renderHours()">${l} min</button>`).join('');
+  $('hr-time').value = h.time; $('sw-email').setAttribute('aria-checked', h.email);
+  $('hr-email-preview').style.display = h.email ? 'block' : 'none';
+  const ready = h.days.length>0;
+  $('hr-preview').innerHTML = ready
+    ? `<b>Call Forth: make the thing</b><br>${dayList()} · ${fmtTime(h.time)} · ${h.len} minutes · repeats weekly<br><span class="link-line">${startLink()}</span><br><span class="note" style="font-style:normal">Reminder at the start time. The link opens Call Forth ready to begin.</span>`
+    : '<span class="note" style="font-style:normal">Choose at least one day.</span>';
+  document.querySelectorAll('.cal-btns .btn').forEach(b=>b.disabled=!ready);
+  $('hr-clear').style.display = h.set ? 'inline' : 'none';
+}
+function toggleDay(k){ const d=state.hours.days; const i=d.indexOf(k); i<0?d.push(k):d.splice(i,1); renderHours(); }
+function nextStart(){ const map={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6}, want=state.hours.days.map(k=>map[k]); const [hh,mm]=state.hours.time.split(':').map(Number);
+  const now=new Date(); for(let i=0;i<8;i++){ const c=new Date(now); c.setDate(now.getDate()+i); c.setHours(hh,mm,0,0); if(want.includes(c.getDay()) && c>now) return c; } return now; }
+const stamp = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}00`;
+function addToCal(where){
+  const h=state.hours, s=nextStart(), e=new Date(s.getTime()+h.len*60000), rule=`RRULE:FREQ=WEEKLY;BYDAY=${h.days.join(',')}`;
+  const title='Call Forth: make the thing', details=`Tap to begin: ${startLink()}`;
+  if (where==='google') {
+    const u=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${stamp(s)}/${stamp(e)}&details=${encodeURIComponent(details)}&recur=${encodeURIComponent(rule)}`;
+    try { window.open(u,'_blank'); } catch(err) {}
+  } else downloadIcs(s,e,rule,title,details); // Apple and Outlook both open the calendar file, which keeps the repeat and the reminder
+  h.set = true; track('hours_set',{days:h.days.join(','), time:h.time, minutes:h.len, email:h.email, calendar:where});
+  openModal(`Your studio hours are on your calendar: ${hoursSummary()}`);
+}
+function downloadIcs(s,e,rule,title,details){
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Call Forth//Studio hours//EN','BEGIN:VEVENT',`UID:studio-hours-${Date.now()}@callforth`,`DTSTAMP:${stamp(new Date())}`,
+    `DTSTART:${stamp(s)}`,`DTEND:${stamp(e)}`,rule,`SUMMARY:${title}`,`DESCRIPTION:${details}`,`URL:${startLink()}`,
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Are you ready to practice? Tap to begin.','TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+  try { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'})); a.download='call-forth-studio-hours.ics'; document.body.appendChild(a); a.click(); a.remove(); } catch(err) {}
+}
+function clearHours(){ state.hours.set=false; state.hours.days=[]; track('hours_removed',{}); renderHours(); }
+/* Opening from the calendar or email link: straight to "What's in the way today?", timer set to the booked length. */
+function scheduledOpen(from){ state.len = +new URLSearchParams(location.search).get('len') || state.hours.len || 15; state.left = state.len*60;
+  track('scheduled_open',{from, minutes:state.len}); state.greeting = 'The studio is open, {n}'; state.question = "What's in the way today?"; go('home'); }
+
+/* Book a consult: straight to Suz's scheduling page on Stan, in a new tab */
+const BOOKING_URL = 'https://stan.store/[your-stan-handle]';
+function bookConsult(from){ track('consult_clicked',{from}); try { window.open(BOOKING_URL, '_blank', 'noopener'); } catch(e) {} }
+
+/* studio */
+function upgrade(){ track('upgraded',{price:27}); state.member = true; $('member').checked = true; openModal('Welcome to the full studio. Every door is open. [In the real app, payment happens here.]'); }
+
+function openModal(t){ $('modal-text').textContent = t; $('modal').classList.add('on'); }
+function closeModal(){ $('modal').classList.remove('on'); if (state.member && document.querySelector('#s-studio.on')) go('home'); }
+
+/* preview-only jump */
+function jump(v){
+  if (v === 'logf') { state.member = true; $('member').checked = true; state.logFilter = 'teeth'; go('log'); return; }
+  if (v === 'hours') { state.member = true; $('member').checked = true; go('hours'); return; }
+  if (v === 'calopen') { state.member = true; $('member').checked = true; if(!state.hours.days.length){state.hours.days=['MO','WE','FR'];state.hours.set=true;} scheduledOpen('calendar'); return; }
+  if (v.startsWith('s:')) { const step = v.slice(2); if (!state.block || state.step==='log') startSession('teeth'); else go('session');
+    if (step === 'flow') beginMaking(); else setStep(step); }
+  else go(v);
+}
+if (new URLSearchParams(location.search).has('nopreview')) document.body.classList.add("no-preview"); if (new URLSearchParams(location.search).has("shot")) document.body.classList.add("shot");
+applyLight();
+if (new URLSearchParams(location.search).has('start')) { state.member = true; scheduledOpen(new URLSearchParams(location.search).get('from') || 'calendar'); } else go('signin');
+</script>
+</body>
+</html>
