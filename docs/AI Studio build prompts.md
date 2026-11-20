@@ -2,13 +2,17 @@
 
 Use these in Google AI Studio, Build mode, in order. Paste one phase, let it finish, check it against the screenshots, then paste the next. Don't paste the smaller change prompts from our chat: everything in them is already included here and in the prototype.
 
-Before Phase 1, attach two files using the + (Add files) button in the prompt box:
-- **Call Forth prototype.html** (the working prototype: the exact look, words and behavior)
-- **Suzanne Mozes My Offer.md** (the App Brief: every screen, rule and event, in writing)
+Everything lives in the repository https://github.com/suzannemozes/callforth:
+- **prototype/index.html** (the working prototype: the exact look, words and behavior)
+- **docs/App Brief.md** (every screen, rule and event, in writing)
+- **docs/Phase 1 paste-in.txt** (the Phase 1 prompt plus the App Brief, for tools that only take pasted text)
+- **screenshots/** (14 key phone screens, in order)
+
+Give AI Studio the repository link, or attach the prototype and App Brief with the + (Add files) button.
 
 If AI Studio won't take the HTML file, use "Import from GitHub" in the same + menu instead (Claude can put the prototype in a GitHub repository for you).
 
-**If only images can be uploaded (as in FEA Create):** skip the Phase 1 prompt below. Instead, upload the 14 images from "Call Forth screenshots for AI Studio", then paste the whole of "Call Forth Phase 1 paste-in.txt" (the Phase 1 prompt plus the full App Brief). After the first build, for an exact match, open the Code tab, create a file called reference/prototype.html, paste in the contents of "Call Forth prototype.html", and ask: "Compare the app with reference/prototype.html and match its design, wording and behavior exactly, screen by screen." Then continue with Phase 2.
+**If only images can be uploaded (as in FEA Create):** skip the Phase 1 prompt below. Instead, upload the 14 images from screenshots/, then paste the whole of docs/Phase 1 paste-in.txt (the Phase 1 prompt plus the full App Brief). After the first build, for an exact match, open the Code tab, create a file called reference/prototype.html, paste in the contents of prototype/index.html, and ask: "Compare the app with reference/prototype.html and match its design, wording and behavior exactly, screen by screen." Then continue with Phase 2.
 
 ---
 
@@ -17,9 +21,9 @@ If AI Studio won't take the HTML file, use "Import from GitHub" in the same + me
 ```
 Build "Call Forth", a web app for creators (writers, artists, musicians, makers) that gets them from blocked to making in under two minutes.
 
-I've attached two files:
-1) "Call Forth prototype.html" is a complete working prototype. Treat it as the source of truth for design, wording, layout, animation and behavior. Recreate it faithfully as a React app: same screens, same text, same colors, fonts, spacing, buttons, animations and logic. Do not redesign, rename, add or remove anything.
-2) "Suzanne Mozes My Offer.md" is the written App Brief. Section 9 describes every screen, rule and tracked event. Where the prototype and the brief differ, follow the prototype.
+Use the repository https://github.com/suzannemozes/callforth.
+1) "prototype/index.html" is a complete working prototype. Treat it as the source of truth for design, wording, layout, animation and behavior. Recreate it faithfully as a React app: same screens, same text, same colors, fonts, spacing, buttons, animations and logic. Do not redesign, rename, add or remove anything.
+2) "docs/App Brief.md" is the written App Brief: every screen, rule and tracked event. Where the prototype and the brief differ, follow the prototype.
 
 Ignore the dashed "Preview: jump to screen" panel in the prototype. It's a testing tool, not part of the app. Keep it only as a hidden developer panel that shows when the URL has ?preview.
 
