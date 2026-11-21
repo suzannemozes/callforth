@@ -1284,7 +1284,7 @@ function autoBreath(){
   cancelCountdown(); state.breathStarted = false; let n = 3;
   const c = $('circle'); c.style.transitionDuration = '.4s'; c.style.transform = 'scale(.6)';
   const show = () => { $('circle-word').textContent = n; $('circle-word').classList.add('count'); $('breath-count').textContent = `Breathing with you in ${n}…`; };
-  show(); $('breath-btn').textContent = 'Pause'; state.counting = true;
+  show(); $('breath-btn').textContent = 'Pause'; state.counting = true; koshi(state.breath);
   state.cdid = setInterval(() => { n--; if (n > 0) { show(); return; } cancelCountdown(); state.breathStarted = true;
     track('breath_started',{breath:state.breath, auto:true}); $('audio-fill').style.width = '0'; startBreath(); $('breath-btn').textContent = 'Pause'; }, 1000);
 }
@@ -1309,7 +1309,7 @@ function toggleBreath(){
   if (state.counting) { cancelCountdown(); return; }
   if (state.breathing) { stopBreath(); return; }
   state.breathStarted = true;
-  track('breath_started',{breath:state.breath});
+  track('breath_started',{breath:state.breath}); koshi(state.breath);
   $('audio-fill').style.width = '0';
   startBreath(); $('breath-btn').textContent = 'Pause';
 }
@@ -1428,6 +1428,30 @@ function bell(soft){
         v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(vol*g, t0 + .18); v.gain.exponentialRampToValueAtTime(.0001, t0 + 5.5);
         o.connect(v).connect(lp); o.start(t0); o.stop(t0 + 5.7); }); };
     if (soft) { strike(0, .035); strike(1.6, .025); } else strike(0, .045);
+  } catch(e) {}
+}
+/* Each breath opens with its own Koshi chime, an octave below the real chime, played as the 3-2-1 countdown begins.
+   The tuning matches the breath's intention:
+   Box breath -> Aria (air, mental clarity) · Vagal nerve breath -> Terra (earth, grounding)
+   Lion's breath -> Ignis (fire, transformation) · Bumble bee hum -> Aqua (water, emotional release)
+   Eight steel rods per chime; a soft pass of five notes over about two seconds, ringing out by about 3.5 seconds. Web Audio, no sound files. */
+const KOSHI = {
+  terra: [196.0, 261.6, 329.6, 349.2, 392.0, 523.3, 659.3, 784.0],   /* G C E F G C E G */
+  aqua:  [220.0, 293.7, 349.2, 392.0, 440.0, 587.3, 698.5, 880.0],   /* A D F G A D F A */
+  aria:  [220.0, 261.6, 329.6, 440.0, 493.9, 523.3, 659.3, 987.8],   /* A C E A B C E B */
+  ignis: [196.0, 246.9, 293.7, 392.0, 493.9, 587.3, 784.0, 880.0]    /* G B D G B D G A */
+};
+const BREATH_CHIME = { box:'aria', vagal:'terra', lion:'ignis', bee:'aqua' };
+function koshi(breath){
+  try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)()); if (ctx.state === 'suspended') ctx.resume();
+    const rods = KOSHI[BREATH_CHIME[breath] || 'terra'];
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200; lp.Q.value = .3;
+    const room = ctx.createGain(); room.gain.value = 1; lp.connect(room); room.connect(ctx.destination);
+    [[.023,.2],[.041,.14],[.067,.09]].forEach(([d,g]) => { const dl = ctx.createDelay(); dl.delayTime.value = d; const gg = ctx.createGain(); gg.gain.value = g; lp.connect(dl).connect(gg).connect(ctx.destination); });
+    [[0,1,.9],[.38,3,.75],[.80,2,.7],[1.30,5,.6],[1.85,4,.5]].forEach(([at, i, v]) => { const t0 = ctx.currentTime + .03 + at;
+      [[1,1,1],[1.0018,.35,1],[2.756,.2,.45],[5.404,.05,.22]].forEach(([r, g, d]) => { const o = ctx.createOscillator(), gn = ctx.createGain(); o.type = 'sine'; o.frequency.value = rods[i]*r;
+        gn.gain.setValueAtTime(0, t0); gn.gain.linearRampToValueAtTime(.045*v*g, t0 + .004); gn.gain.exponentialRampToValueAtTime(.0001, t0 + 3*d + .004);
+        o.connect(gn).connect(lp); o.start(t0); o.stop(t0 + 3*d + .05); }); });
   } catch(e) {}
 }
 /* 2. Clock or bar. People who hide their numbers get the bar. */
