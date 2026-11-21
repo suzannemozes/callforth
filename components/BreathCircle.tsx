@@ -13,23 +13,35 @@
  * - When all rounds are done it shows "Done" and calls onComplete() after 1.2s.
  * - Reduced motion: no growing or shrinking, the words and colors still guide the breath.
  *
- * Usage:
- *   <BreathCircle breath="box" onComplete={() => goToStep('move')} onSkip={() => goToStep('move')} />
+ * Usage (the breath's timing comes from the app's content file, src/lib/content.ts,
+ * so every breath's words, counts, rounds and chime live in one place):
+ *   import { BREATHS } from '../lib/content';
+ *   const br = BREATHS[breathId];
+ *   <BreathCircle key={breathId} timing={{ rounds: br.rounds, pattern: br.pattern, chime: br.chime }}
+ *     onComplete={() => goToStep('move')} onSkip={() => goToStep('move')} />
+ *
+ * Pattern words: 'In' grows the circle, 'Sip' grows it a touch more, 'Hold' keeps it still,
+ * anything else ('Out', 'Haaa', 'Hum', 'Whoosh', 'Release') shrinks it.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { playKoshi, type ChimeName } from './koshi';
 
-export type BreathId = 'box' | 'vagal' | 'lion' | 'bee';
+export type Phase = readonly [word: string, seconds: number];
+export interface BreathTiming { rounds: number; pattern: readonly Phase[]; chime: ChimeName }
 
-type Phase = [word: string, seconds: number];
-interface Breath { rounds: number; pattern: Phase[]; chime: ChimeName }
-
-export const BREATH_PATTERNS: Record<BreathId, Breath> = {
-  box:   { rounds: 4, pattern: [['In', 4], ['Hold', 4], ['Out', 4], ['Hold', 4]], chime: 'aria' },
-  vagal: { rounds: 5, pattern: [['In', 2], ['Sip', 1], ['Out', 6]],              chime: 'terra' },
-  lion:  { rounds: 4, pattern: [['In', 4], ['Haaa', 3]],                          chime: 'ignis' },
-  bee:   { rounds: 5, pattern: [['In', 4], ['Hum', 8]],                           chime: 'aqua' },
+/** Reference copy of the prototype's timings, for checking content.ts against.
+ *  The app should NOT read from this: content.ts is the source of truth. */
+export const PROTOTYPE_TIMINGS: Record<string, BreathTiming> = {
+  box:    { rounds: 4,  pattern: [['In', 4], ['Hold', 4], ['Out', 4], ['Hold', 4]], chime: 'aria' },
+  vagal:  { rounds: 5,  pattern: [['In', 4], ['Sip', 2], ['Out', 8]],              chime: 'terra' },
+  lion:   { rounds: 4,  pattern: [['In', 4], ['Haaa', 7]],                          chime: 'ignis' },
+  bee:    { rounds: 5,  pattern: [['In', 4], ['Hum', 7]],                           chime: 'aqua' },
+  four78: { rounds: 4,  pattern: [['In', 4], ['Hold', 7], ['Out', 8]],              chime: 'aqua' },
+  belly:  { rounds: 6,  pattern: [['In', 4], ['Out', 6]],                           chime: 'terra' },
+  exhale: { rounds: 5,  pattern: [['In', 4], ['Out', 8]],                           chime: 'aqua' },
+  pursed: { rounds: 10, pattern: [['In', 2], ['Out', 4]],                           chime: 'aria' },
 };
+const FALLBACK: BreathTiming = { rounds: 4, pattern: [['In', 4], ['Out', 6]], chime: 'terra' };
 
 const DUSK: Array<[number, [number, number, number]]> = [
   [0, [233, 211, 198]], [0.3, [227, 200, 146]], [0.55, [185, 196, 154]], [0.78, [141, 186, 176]], [1, [110, 159, 174]],
@@ -49,12 +61,16 @@ function duskColor(p: number): string {
 
 const SMALL = 0.6, BIG = 0.95, SIP = 1.05;
 
-export default function BreathCircle({ breath, onComplete, onSkip }: {
-  breath: BreathId;
+export default function BreathCircle({ timing, onComplete, onSkip }: {
+  timing: BreathTiming;
   onComplete: () => void;
   onSkip?: () => void;
 }) {
-  const b = BREATH_PATTERNS[breath] ?? BREATH_PATTERNS.box;
+  const b = timing && timing.pattern.length && timing.rounds > 0 ? timing : FALLBACK;
+  // Refs keep the breath steady if the parent re-renders mid-breath (an inline timing object or
+  // onComplete arrow would otherwise restart it). To switch breaths, give the component a new key.
+  const bRef = useRef(b); bRef.current = b;
+  const doneRef = useRef(onComplete); doneRef.current = onComplete;
   const [mode, setMode] = useState<'counting' | 'breathing' | 'paused' | 'done'>('counting');
   const [count, setCount] = useState(3);
   const [word, setWord] = useState('3');
@@ -68,6 +84,7 @@ export default function BreathCircle({ breath, onComplete, onSkip }: {
   const clear = () => { if (timer.current !== undefined) window.clearTimeout(timer.current); timer.current = undefined; };
 
   const runBreath = useCallback(() => {
+    const b = bRef.current;
     setMode('breathing');
     let i = 0, r = 0, current = SMALL;
     const tick = () => {
@@ -84,28 +101,28 @@ export default function BreathCircle({ breath, onComplete, onSkip }: {
       if (r >= b.rounds) {
         timer.current = window.setTimeout(() => {
           setMode('done'); setWord('Done');
-          timer.current = window.setTimeout(onComplete, 1200);
+          timer.current = window.setTimeout(() => doneRef.current(), 1200);
         }, secs * 1000);
         return;
       }
       timer.current = window.setTimeout(tick, secs * 1000);
     };
     tick();
-  }, [b, onComplete]);
+  }, []);
 
   const startCountdown = useCallback(() => {
     clear();
     setMode('counting'); setRounds(0); setScale(SMALL); setEase(0.4); setColor('#EFE3DA');
     let n = 3;
     setCount(n); setWord(String(n));
-    playKoshi(b.chime);
+    playKoshi(bRef.current.chime);
     const step = () => {
       n -= 1;
       if (n > 0) { setCount(n); setWord(String(n)); timer.current = window.setTimeout(step, 1000); return; }
       runBreath();
     };
     timer.current = window.setTimeout(step, 1000);
-  }, [b, runBreath]);
+  }, [runBreath]);
 
   useEffect(() => { startCountdown(); return clear; }, [startCountdown]);
 

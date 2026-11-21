@@ -9,12 +9,23 @@ Finished, tested code for parts of Call Forth that are hard to rebuild from a de
 
 Copy both into `src/components/`, then use it on the Breathe step:
 
-```tsx
-import BreathCircle from './components/BreathCircle';
+Every breath's timing lives in the app's content file, `src/lib/content.ts`, next to its name, how-to, "Why this works" and sources. Each breath there has `rounds`, `pattern` and `chime`:
 
-<BreathCircle breath={breathId} onComplete={() => goToStep('move')} onSkip={() => goToStep('move')} />
+```ts
+vagal: { name: 'Vagal nerve breath', rounds: 5, pattern: [['In', 4], ['Sip', 2], ['Out', 8]], chime: 'terra', /* how, why, src */ },
 ```
 
-`breath` is one of `'box' | 'vagal' | 'lion' | 'bee'`. The breath's name, how-to and "Why this works" text stay in the app's content file and sit above the component, as in the prototype. Remount it (for example with `key={sessionId}`) to restart for a new session.
+The component reads them from there:
+
+```tsx
+import BreathCircle from './components/BreathCircle';
+import { BREATHS } from '../lib/content';
+
+const br = BREATHS[breathId];
+<BreathCircle key={`${sessionId}-${breathId}`} timing={{ rounds: br.rounds, pattern: br.pattern, chime: br.chime }}
+  onComplete={() => goToStep('move')} onSkip={() => goToStep('move')} />
+```
+
+So changing a count, adding a round or adding a new breath means editing `content.ts` only. Pattern words: `In` grows the circle, `Sip` grows it a touch more, `Hold` keeps it still, anything else (`Out`, `Haaa`, `Hum`) shrinks it. `chime` is one of `'terra' | 'aqua' | 'aria' | 'ignis'`. Give it a new `key` to restart it for a new session or breath; it ignores ordinary re-renders, so it never restarts mid-breath. `PROTOTYPE_TIMINGS` in the file is a reference copy of the prototype's timings, for checking only.
 
 It needs React 18+ and nothing else. It passes TypeScript with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. The buttons use the app's existing `btn` and `quiet` classes.

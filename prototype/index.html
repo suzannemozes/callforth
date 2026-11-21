@@ -760,6 +760,13 @@
     <option value="welcome">Welcome</option>
     <option value="home">Home</option>
     <option value="s:breathe">Session: Breathe</option>
+    <option value="b:four78">Breathe: 4-7-8 breathing</option>
+    <option value="b:belly">Breathe: Diaphragmatic breathing</option>
+    <option value="b:exhale">Breathe: Extended exhale</option>
+    <option value="b:pursed">Breathe: Pursed-lip breathing</option>
+    <option value="b:vagal">Breathe: Vagal nerve breath</option>
+    <option value="b:lion">Breathe: Lion's breath</option>
+    <option value="b:bee">Breathe: Bumble bee hum</option>
     <option value="s:move">Session: Your move</option>
     <option value="s:else">Session: Try something else</option>
     <option value="s:flow">Session: Flow timer</option>
@@ -786,7 +793,7 @@
 
 <script>
 /* SAMPLE CONTENT: Suz replaces all of this with her own words and audio. */
-/* The four core breaths (top:true) are free. The other six live in "More breaths" (Studio).
+/* Eight breaths in use (top:true). Coherent breathing, alternate nostril and somatic release are kept for later.
    SAMPLE "why" text: Suz to confirm every line and source before launch. */
 const BREATHS = {
   box: { top:true, name:'Box breath', short:'Box breath', rounds:4,
@@ -795,30 +802,44 @@ const BREATHS = {
     why:'When your head is full of chatter, a steady, even rhythm gives your attention one simple thing to hold. Slow, paced breathing is linked to a calmer heart rate and a more settled nervous system, which clears room for the work.',
     src:'Source: Zaccaro et al. (2018), "How breath-control can change your life: a systematic review on psycho-physiological correlates of slow breathing," Frontiers in Human Neuroscience.' },
   vagal: { top:true, name:'Vagal nerve breath', short:'Vagal nerve breath', rounds:5,
-    how:'Breathe in through your nose, then take a second short sip of air on top. Let it all out slowly through your mouth, as a long sigh. Five times.',
-    pattern:[['In',2],['Sip',1],['Out',6]], audio:'1:20',
+    how:'Breathe in through your nose for four, then take a second short sip of air on top for two. Let it all out slowly through your mouth for eight, as a long sigh. Five times.',
+    pattern:[['In',4],['Sip',2],['Out',8]], audio:'1:10',
     why:'This double inhale with a long exhale, sometimes called the physiological sigh, is the quickest brake on a freeze. In a 2023 Stanford study, five minutes a day of this breathing (called cyclic sighing) improved mood more than mindfulness meditation did.',
     src:'Source: Balban et al. (2023), "Brief structured respiration practices enhance mood and reduce physiological arousal," Cell Reports Medicine.' },
   lion: { top:true, name:"Lion's breath", short:"Lion's breath", rounds:4,
-    how:'Breathe in deeply through your nose. Then open your mouth wide, stick your tongue out toward your chin, and breathe out hard with a loud "haaa." Four times. Yes, you will feel silly. That is the point.',
-    pattern:[['In',4],['Haaa',3]], audio:'1:00',
+    how:'Breathe in deeply through your nose for four. Then open your mouth wide, stick your tongue out toward your chin, and breathe out with a long, loud "haaa" for seven. Four times. Yes, you will feel silly. That is the point.',
+    pattern:[['In',4],['Haaa',7]], audio:'0:45',
     why:'"I\'m not a real artist" lives in the body as a tight jaw, a held face, a closed throat. Lion\'s breath releases all three on purpose, and feeling a little ridiculous loosens the grip of self-consciousness. It comes from yoga, and there is little formal research on it, so we offer it as a release, not a cure.',
     src:'Tradition: Simhasana (yoga). [Suz to add a source she trusts.]' },
   bee: { top:true, name:'Bumble bee hum', short:'Bumble bee hum', rounds:5,
-    how:'Close your eyes. Gently press the soft flap of each ear closed with your index fingers. Breathe in through your nose, then hum low and steady as you breathe out, for as long as is comfortable. Five times.',
-    pattern:[['In',4],['Hum',8]], audio:'1:40',
+    how:'Close your eyes. Gently press the soft flap of each ear closed with your index fingers. Breathe in through your nose for four, then hum low and steady as you breathe out for seven. Five times.',
+    pattern:[['In',4],['Hum',7]], audio:'0:55',
     why:'Humming makes your exhale long and slow, and the vibration gives your mind something to listen to besides the critic. Humming also raises nitric oxide in the nose many times over compared with quiet breathing.',
     src:'Tradition: Bhramari pranayama (yoga). Source: Weitzberg & Lundberg (2002), "Humming greatly increases nasal nitric oxide," American Journal of Respiratory and Critical Care Medicine.' },
-  exhale: { name:'Extended exhale', short:'Extended exhale', rounds:6, how:'In for four. Out slowly for eight. Six rounds.', pattern:[['In',4],['Out',8]], audio:'1:50',
-    why:'A long exhale tells your body it is safe enough to stop bracing. [Suz to confirm.]', src:'Source: Zaccaro et al. (2018), Frontiers in Human Neuroscience. [Suz to confirm.]' },
-  four78: { name:'4-7-8 breath', short:'4-7-8 breath', rounds:4, how:'In through your nose for four. Hold for seven. Out through your mouth, with a whoosh, for eight. Four rounds.', pattern:[['In',4],['Hold',7],['Whoosh',8]], audio:'1:30',
-    why:'The long hold and longer exhale slow a racing mind before a daunting start. [Suz to confirm.]', src:'Popularized by Dr. Andrew Weil. [Suz to add a source she trusts.]' },
+  four78: { top:true, name:'4-7-8 breathing', short:'4-7-8 breathing', rounds:4,
+    how:'Breathe in quietly through your nose for four. Hold gently at the top for seven. Breathe out slowly through your mouth for eight. Four rounds.',
+    pattern:[['In',4],['Hold',7],['Out',8]], audio:'1:16',
+    why:'A relaxation pattern that pairs a four-second inhale with a seven-second hold and an eight-second exhale. It supports settling and self-regulation. Research on this exact pattern is still small: one study found it improved heart rate variability and blood pressure in healthy young adults, while another found plain slow breathing helped more. We offer it as a way to settle, not a cure.',
+    src:'Taught by the Andrew Weil Center for Integrative Medicine. Sources: Vierra et al. (2022), "Effects of sleep deprivation and 4-7-8 breathing control on heart rate variability, blood pressure, blood glucose, and endothelial function in healthy young adults," Physiological Reports. Appl Psychophysiol Biofeedback (2025), "Comparing the effects of square, 4-7-8, and 6 breaths-per-minute breathing conditions on heart rate variability, CO2 levels, and mood."' },
+  belly: { top:true, name:'Diaphragmatic breathing', short:'Diaphragmatic breathing', rounds:6,
+    how:'Rest one hand on your chest and one on your belly. Breathe in slowly through your nose for four, so your belly rises and your chest stays still. Let your belly fall as you breathe out for six. Six rounds.',
+    pattern:[['In',4],['Out',6]], audio:'1:00',
+    why:'A systematic review found diaphragmatic breathing reduces both the physical and psychological signs of stress in adults, though it drew on only three studies. A single trial adds signals for steadier attention, better mood and lower cortisol, and broader breathwork research shows a small-to-medium drop in stress. It suits everyday stress, anxiety, restlessness or a busy mind.',
+    src:'Sources: Hopper et al. (2019), "Effectiveness of diaphragmatic breathing for reducing physiological and psychological stress in adults: a quantitative systematic review," JBI Database of Systematic Reviews. Ma et al. (2017), "The effect of diaphragmatic breathing on attention, negative affect and stress in healthy adults," Frontiers in Psychology. Fincham et al. (2023), "Effect of breathwork on stress and mental health: a meta-analysis of randomised-controlled trials," Scientific Reports.' },
+  exhale: { top:true, name:'Extended exhale', short:'Extended exhale', rounds:5,
+    how:'Breathe in through your nose for four. Breathe out slowly, through your nose or softly through your mouth, for eight, twice as long as the in-breath. Five rounds.',
+    pattern:[['In',4],['Out',8]], audio:'1:00',
+    why:'A slow-breathing practice in which the out-breath is deliberately longer than the in-breath, here twice as long. In studies, a longer exhale shifted heart rate variability toward the body\'s rest-and-recover side, though results vary from study to study. It is a portable way to settle when you feel stressed, anxious or keyed up.',
+    src:'Sources: Bae et al. (2021), "Increased exhalation to inhalation ratio during breathing enhances high-frequency heart rate variability in healthy adults," Psychophysiology. Van Diest et al. (2014), "Inhalation/exhalation ratio modulates the effect of slow breathing on heart rate variability and relaxation," Applied Psychophysiology and Biofeedback.' },
+  pursed: { top:true, name:'Pursed-lip breathing', short:'Pursed-lip breathing', rounds:10,
+    how:'Breathe in gently through your nose for two. Purse your lips as if blowing out a candle, and breathe out slowly and steadily for four. Ten rounds.',
+    pattern:[['In',2],['Out',4]], audio:'1:00',
+    why:'You breathe in gently through the nose and out slowly through pursed lips, which creates a light back-pressure that lengthens the exhale and slows your breathing. It is best studied for breathlessness, where it lowers breathing rate, and people who feel wound up or short of breath from stress may find the longer exhale helpful too. A longer out-breath is linked to more activity in the vagus nerve, the main channel of the body\'s rest-and-recover system.',
+    src:'Sources: European Respiratory Review (2024), "Breathing techniques to reduce symptoms in people with serious respiratory illness: a systematic review." Bae et al. (2021), Psychophysiology.' },
   coherent: { name:'Coherent breathing', short:'Coherent breathing', rounds:6, how:'In for about five and a half seconds, out for about five and a half, with no pause at the top or bottom. Six rounds, or longer.', pattern:[['In',5.5],['Out',5.5]], audio:'2:00',
     why:'About five to six breaths a minute is the slow pace most studied in breathing research, linked to a steadier heart rhythm and sustained focus. [Suz to confirm.]', src:'Source: Zaccaro et al. (2018), Frontiers in Human Neuroscience.' },
   nostril: { name:'Alternate nostril', short:'Alternate nostril', rounds:3, how:'Close your right nostril with your thumb; breathe in through the left. Close both. Release the right; breathe out. Breathe in through the right. Close both. Release the left; breathe out. Three rounds.', pattern:[['In · left',4],['Hold',2],['Out · right',4],['In · right',4],['Hold',2],['Out · left',4]], audio:'2:00',
     why:'The small coordination task pulls scattered attention into the present. [Suz to confirm.]', src:'Tradition: Nadi shodhana (yoga). [Suz to add a source she trusts.]' },
-  belly: { name:'Belly breathing', short:'Belly breathing', rounds:6, how:'One hand on your chest, one on your belly. Breathe in slowly through your nose so your belly rises and your chest stays still. Breathe out gently. Six rounds.', pattern:[['In',4],['Out',6]], audio:'1:40',
-    why:'Moving from shallow chest breaths to slow belly breaths helps break the feedback loop of panic. [Suz to confirm.]', src:'[Suz to add a source she trusts.]' },
   somatic: { name:'Somatic release', short:'Somatic release', rounds:10, how:'Ten slow breaths. On each exhale, let one thing go: drop your shoulders, unclench your hands, soften your brow. Silently name where you feel the tension.', pattern:[['In',4],['Release',6]], audio:'2:30',
     why:'Naming where resistance sits in your body lets you notice it without obeying it. [Suz to confirm.]', src:'[Suz to add a source she trusts.]' },
 };
@@ -1028,7 +1049,7 @@ function startSession(id){
   state.sid = 's' + Date.now().toString(36); track('block_chosen',{block:id});
   state.block = id; state.tried = 'move'; state.felt = null; state.blockAt = Date.now(); go('session');
   const b = blockById(id);
-  setBreath(chooseBreath(id));
+  setBreath(state.forceBreath || chooseBreath(id)); state.forceBreath = null;
   renderLastTime(id);
   $('move-text').textContent = b.move;
   state.offered = [];
@@ -1422,7 +1443,7 @@ const KOSHI = {
   aria:  [220.0, 261.6, 329.6, 440.0, 493.9, 523.3, 659.3, 987.8],   /* A C E A B C E B */
   ignis: [196.0, 246.9, 293.7, 392.0, 493.9, 587.3, 784.0, 880.0]    /* G B D G B D G A */
 };
-const BREATH_CHIME = { box:'aria', vagal:'terra', lion:'ignis', bee:'aqua' };
+const BREATH_CHIME = { box:'aria', vagal:'terra', lion:'ignis', bee:'aqua', four78:'aqua', belly:'terra', exhale:'aqua', pursed:'aria' };
 function koshi(breath){
   try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)()); if (ctx.state === 'suspended') ctx.resume();
     const rods = KOSHI[BREATH_CHIME[breath] || 'terra'];
@@ -1598,6 +1619,7 @@ function jump(v){
   if (v === 'logf') { state.member = true; $('member').checked = true; state.logFilter = 'teeth'; go('log'); return; }
   if (v === 'hours') { state.member = true; $('member').checked = true; go('hours'); return; }
   if (v === 'calopen') { state.member = true; $('member').checked = true; if(!state.hours.days.length){state.hours.days=['MO','WE','FR'];state.hours.set=true;} scheduledOpen('calendar'); return; }
+  if (v.startsWith('b:')) { state.forceBreath = v.slice(2); startSession('teeth'); return; }
   if (v.startsWith('s:')) { const step = v.slice(2); if (!state.block || state.step==='log') startSession('teeth'); else go('session');
     if (step === 'flow') beginMaking(); else setStep(step); }
   else go(v);
