@@ -12,6 +12,7 @@ Pick what's in the way. Walk through it. Make the thing. A web app that gets cre
 | `docs/App Brief.md` | The full written spec: every screen, rule, piece of content and tracked event. |
 | `docs/AI Studio build prompts.md` | The five build phases, in order. |
 | `docs/Phase 1 paste-in.txt` | The Phase 1 prompt plus the App Brief, for tools that only accept pasted text. |
+| `components/` | Finished, tested React components to copy in as they are, starting with the breathing circle (`BreathCircle.tsx` and `koshi.ts`). |
 | `screenshots/` | 14 key phone screens, numbered in the order a person moves through the app. |
 
 ## For AI builders
