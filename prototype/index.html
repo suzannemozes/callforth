@@ -134,6 +134,11 @@
   .crumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
   .crumbs span { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; color: var(--muted); border-bottom: 1px solid transparent; padding-bottom: 2px; }
   .crumbs span.on { color: var(--charcoal); border-bottom-color: var(--charcoal); }
+  .resume { background: var(--panel); border: 1px solid var(--stone); padding: 26px 26px 20px; margin-top: 8px; }
+  .resume .resume-line { font-family: var(--h); font-size: 1.3rem; line-height: 1.35; margin: 10px 0 18px; }
+  .resume .note { margin-top: 12px; }
+  #else-choices.chosen .choice:not(.on) { display: none; }
+  #else-choices.chosen { grid-template-columns: 1fr; }
   .breath-done { text-align: center; margin: -8px 0 20px; }
   .breath-done .note { margin-top: 10px; }
   .alt-breath { text-align: center; margin: -14px 0 24px; }
@@ -339,7 +344,7 @@
 <header>
   <div class="bar">
     <button class="brand" onclick="go('home')" aria-label="Call Forth, go home">Call Forth <span class="dot"></span></button>
-    <button class="pill leave" aria-label="Leave session" onclick="track('session_left',{step:state.step});go('home')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> Leave</button>
+    <button class="pill leave" aria-label="Leave session" onclick="leaveSession()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> Leave</button>
     <nav class="top" aria-label="Main">
       <button data-nav="home" onclick="go('home')">Home</button>
       <button data-nav="session" onclick="startOrResume()">Session</button>
@@ -420,8 +425,14 @@
       <p class="reassure">About two minutes from here to making.</p>
       <p class="echo" id="echo" style="display:none"></p>
     </div>
+    <div class="resume" id="resume" style="display:none">
+      <div class="label">Pick up where you left off</div>
+      <p class="resume-line">You'd already begun. No need to start over.</p>
+      <div class="actions"><button class="btn" onclick="resumeSession()">My work is open. Start.</button><button class="btn ghost" onclick="resumeMove()">Show me my move</button></div>
+      <p class="note" id="resume-note"></p>
+    </div>
     <div class="blocks" id="blocks"></div>
-    <p style="margin-top:20px"><button class="quiet ready" onclick="straightToMaking()"><span id="ready-line">I feel pretty good today.</span> <span style="white-space:nowrap;display:inline-flex;align-items:center;gap:8px">Straight to making <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></p>
+    <p style="margin-top:20px" id="ready-wrap"><button class="quiet ready" onclick="straightToMaking()"><span id="ready-line">I feel pretty good today.</span> <span style="white-space:nowrap;display:inline-flex;align-items:center;gap:8px">Straight to making <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></p>
   </section>
 
   <!-- SESSION -->
@@ -495,9 +506,9 @@
 
       <!-- something else: two choices only -->
       <div id="step-else">
-        <button class="quiet back" style="margin:-6px 0 4px -4px" onclick="setStep('move')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Back to my move</button>
+        <button class="quiet back" id="else-back" style="margin:-6px 0 4px -4px" onclick="setStep('move')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Back to my move</button>
         <div class="label" style="margin-top:6px">Something else</div>
-        <h2 style="margin:8px 0 6px">Two ways in. Pick one.</h2>
+        <h2 style="margin:8px 0 6px" id="else-h">Two ways in. Pick one.</h2>
         <div class="two-choice" id="else-choices"></div>
         <div id="else-detail"></div>
         <p class="note why-two">Why only two? When you're stuck, fewer choices make it easier to start.</p>
@@ -656,6 +667,11 @@
       <div class="setting">
         <div><h3>Show my log history</h3><p class="note" style="font-style:normal;margin:4px 0 0">Your past sessions, patterns and "last time you felt this."</p></div>
         <button class="switch" role="switch" id="sw-history" onclick="setPref('showHistory', !state.showHistory)"><span></span></button>
+      </div>
+      <div class="label" style="margin-top:34px">What you hear</div>
+      <div class="setting">
+        <div><h3>Play sounds</h3><p class="note" style="font-style:normal;margin:4px 0 0">The chimes during the breath and your move, the bowl at the start and end of the timer, and studio background sounds. Turn off for a silent session.</p></div>
+        <button class="switch" role="switch" id="sw-sound" onclick="setPref('soundOn', !state.soundOn)"><span></span></button>
       </div>
       <button class="btn" style="margin-top:26px" onclick="go(state.backFrom || 'home')">Done</button>
     </div>
@@ -821,6 +837,7 @@
   <label>Visits <input type="number" id="visits" min="1" value="12" style="width:52px" onchange="state.visits=+this.value;decideConsult();refreshPanels()"></label>
   <label><input type="checkbox" id="force" onchange="state.forceConsult=this.checked;decideConsult();refreshPanels()"> Show consult this visit</label>
   <button onclick="newVisit();go('home')" style="font:inherit">Simulate a new sign-on</button>
+  <button onclick="if(state.resume){state.resume.at-=15*60000;} go('home')" style="font:inherit">Let 15 minutes pass</button>
   <button onclick="go('quote');renderQuote(1)" style="font:inherit">Next day's light</button>
   <label><input type="checkbox" id="member" onchange="state.member=this.checked;renderBlocks()"> Preview as Studio member</label>
   <label>Light <select id="light" onchange="state.lightPreview=this.value;applyLight()"><option value="">Now</option><option value="morning">Morning</option><option value="evening">Evening</option><option value="night">Night (dark room)</option></select></label>
@@ -945,7 +962,7 @@ const OPTIONS = {
 };
 
 
-const state = { daysThisMonth: 11, timerView:'clock', hours:{days:[], time:'09:00', len:15, email:true, set:false}, hoursOffered:false, member:false, showNumbers:true, showHistory:true, useAudio:true, sound:'Silence', name:'Maya', disciplines:['writing'], customTags:[], practiced:'12 years', visits:12, consultMonth:null, consultThisVisit:false, forceConsult:false, block:null, step:'breathe', len:15, left:15*60, running:false, tid:null, btid:null, breathing:false,
+const state = { daysThisMonth: 11, timerView:'clock', hours:{days:[], time:'09:00', len:15, email:true, set:false}, hoursOffered:false, member:false, showNumbers:true, showHistory:true, soundOn:true, useAudio:true, sound:'Silence', name:'Maya', disciplines:['writing'], customTags:[], practiced:'12 years', visits:12, consultMonth:null, consultThisVisit:false, forceConsult:false, block:null, step:'breathe', len:15, left:15*60, running:false, tid:null, btid:null, breathing:false,
   log:[
     { when:'Yesterday', block:'teeth', mins:15, breath:'box', tried:'move', felt:'helped', what:'Finally opened the essay. 400 words, half of them good.' },
     { when:'Monday', block:'blank', mins:25, breath:'vagal', tried:'move', felt:'helped', what:'Three ugly sketches, then one I like.' },
@@ -1035,7 +1052,7 @@ function renderSettings(){
   $('hours-line').textContent = !state.member ? 'Set regular times and get a reminder that opens your session. With the full studio.'
     : state.hours.set ? hoursSummary() : 'Set regular times. Your calendar reminds you, and one tap opens your session.';
   $('hours-btn').textContent = state.member ? (state.hours.set ? 'Change' : 'Set') : 'Full studio';
-  $('sw-numbers').setAttribute('aria-checked', state.showNumbers); $('sw-history').setAttribute('aria-checked', state.showHistory);
+  $('sw-numbers').setAttribute('aria-checked', state.showNumbers); $('sw-history').setAttribute('aria-checked', state.showHistory); $('sw-sound').setAttribute('aria-checked', state.soundOn !== false);
 }
 function signIn(){ state.visits++; decideConsult(); newVisit(); go('register'); }
 function register(){
@@ -1064,11 +1081,35 @@ function renderEcho(){
   const e = notes[(state.visits/3) % notes.length | 0];
   $('echo').innerHTML = `"${e.what.replace(/</g,'&lt;')}" <span class="who">You, ${e.when.toLowerCase()}</span>`;
 }
+/* No re-rolling: if someone leaves a session before making (Breathe, Your move, Something else, or the timer before
+   it finishes) and comes back within 15 minutes, Home offers only that session, straight to the timer or their move.
+   After 15 minutes everything resets. Leaving on Log it (after making) doesn't count. */
+const RESUME_MINS = 15;
+function leaveSession(){
+  track('session_left', { step: state.step });
+  const unfinished = ['breathe','move','else'].includes(state.step) || (state.step === 'flow' && !state.over && state.left > 0);
+  state.resume = unfinished ? { at: Date.now(), block: state.block, breath: state.breath, tried: state.tried, sid: state.sid } : null;
+  go('home');
+}
+function resumeActive(){ return !!(state.resume && Date.now() - state.resume.at < RESUME_MINS * 60000); }
+function resumeSession(){ const r = state.resume; track('resume_started', { to: 'timer' }); state.resume = null; reenter(r); beginMaking(); }
+function resumeMove(){ const r = state.resume; track('resume_started', { to: 'move' }); state.resume = null; reenter(r); state.cueSid = state.sid; setStep('move'); }
+function reenter(r){ state.block = r.block; state.breath = r.breath; state.tried = r.tried || 'move'; state.sid = r.sid; state.blockAt = Date.now(); go('session'); }
 function renderBlocks(){
   if (!state.greeting) newVisit(true);
   renderEcho();
   $('hello-name').textContent = state.greeting.replace('{n}', state.name);
   $('home-q').textContent = state.question;
+  const resuming = resumeActive();
+  $('resume').style.display = resuming ? 'block' : 'none';
+  $('blocks').style.display = resuming ? 'none' : ''; $('ready-wrap').style.display = resuming ? 'none' : '';
+  document.querySelector('#s-home .reassure').style.display = resuming ? 'none' : ''; if (resuming) $('echo').style.display = 'none';
+  if (resuming) {
+    const left = Math.max(1, Math.ceil((state.resume.at + RESUME_MINS*60000 - Date.now()) / 60000));
+    $('home-q').textContent = 'Your work is still waiting.';
+    $('resume-note').textContent = `Everything else opens again in ${left} minute${left === 1 ? '' : 's'}.`;
+    track('resume_shown', { mins_left: left });
+  } else if (state.resume) state.resume = null;
   const wrap = $('blocks'); wrap.innerHTML = '';
   BLOCKS.forEach(b => {
     const open = b.free || state.member;
@@ -1405,7 +1446,7 @@ function altBreaths(){
 }
 function renderAltBreath(){
   const box = $('alt-breath'), alts = altBreaths();
-  box.style.display = (state.member && alts.length) ? 'block' : 'none';
+  box.style.display = (state.member && alts.length && state.altSid !== state.sid) ? 'block' : 'none';
   $('alt-open').style.display = 'none'; $('alt-toggle').style.display = '';
   $('alt-keep').textContent = 'Keep the ' + BREATHS[state.breath].short;
   $('alt-cards').innerHTML = alts.map(b => `<button class="alt-card" onclick="switchBreath('${b}')"><div class="t">${BREATHS[b].name}</div><div class="d">${ALT_LINE[b] || ''}</div></button>`).join('');
@@ -1417,7 +1458,7 @@ function openAltBreaths(){
 }
 function keepBreath(){ $('alt-open').style.display = 'none'; $('alt-toggle').style.display = ''; if (!state.breathStarted) autoBreath(); }
 function switchBreath(id){
-  track('breath_switched', { from: state.breath, to: id });
+  track('breath_switched', { from: state.breath, to: id }); state.altSid = state.sid;
   setBreath(id); renderAltBreath(); autoBreath();
 }
 /* Breathe again: after a breath ends they can go through it again up to 3 more times. The screen moves on to
@@ -1459,7 +1500,7 @@ function setBreath(id){
 /* try something else */
 function offerElse(){
   state.offered = state.offered || [];
-  $('else-detail').innerHTML = '';
+  $('else-detail').innerHTML = ''; $('else-choices').classList.remove('chosen'); $('else-h').textContent = 'Two ways in. Pick one.'; $('else-back').style.display = '';
   const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
   const pool = Object.keys(OPTIONS).filter(k => state.member || !OPTIONS[k].studio);
   const fresh = pool.filter(k => !state.offered.includes(k));
@@ -1478,6 +1519,7 @@ function pickElse(kind){
   const o = OPTIONS[kind], b = blockById(state.block), locked = o.studio && !state.member;
   track('something_else',{option:kind, locked});
   document.querySelectorAll('#else-choices .choice').forEach(c => c.classList.toggle('on', c.getAttribute('onclick').includes(`'${kind}'`)));
+  if (!locked) { $('else-choices').classList.add('chosen'); $('else-h').textContent = 'Your way in.'; $('else-back').style.display = 'none'; }
   let html;
   if (locked) {
     html = `<div class="card"><div class="label">In the full studio</div><h3 style="margin:8px 0">${o.title}</h3><p>${o.why}. Ten more ways in, many guided by Suz's voice, come with the full studio.</p><button class="btn" onclick="go('studio')">See the studio</button></div>`;
@@ -1501,8 +1543,8 @@ function renderTimerPanel(){
   document.querySelectorAll('#snd-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.snd === state.sound));
   document.querySelectorAll('#view-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.view === currentView()));
   $('view-chips').style.display = state.showNumbers ? '' : 'none';
-  $('snd-chips').style.display = state.member ? '' : 'none';
-  $('timer-status').textContent = state.member ? `${state.len} min · ${state.sound}` : `${state.len} min`;
+  $('snd-chips').style.display = (state.member && state.soundOn !== false) ? '' : 'none';
+  $('timer-status').textContent = state.soundOn === false ? `${state.len} min · Sound off` : state.member ? `${state.len} min · ${state.sound}` : `${state.len} min`;
 }
 function toggleTimerPanel(){ const p = $('timer-panel'); const open = p.style.display === 'none'; p.style.display = open ? 'block' : 'none'; $('timer-pill').setAttribute('aria-expanded', open); renderTimerPanel(); }
 /* One tap from the move to making: the timer starts at their usual length and sound. */
@@ -1528,6 +1570,7 @@ function resetFlowUI(){ document.body.classList.remove('timeup'); state.over = f
 }
 /* 3. One soft bell marks the threshold (and a gentler one at the end). Web Audio, no sound files. */
 function bell(soft){
+  if (state.soundOn === false) return;
   /* A warm singing-bowl tone: low fundamental, two gently beating partials, slow bloom, long fade, softened highs. */
   try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)());
     if (ctx.state === 'suspended') ctx.resume();
@@ -1552,6 +1595,7 @@ const KOSHI = {
 const BREATH_CHIME = { box:'aria', vagal:'terra', lion:'ignis', bee:'aqua', four78:'aqua', belly:'terra', exhale:'aqua', pursed:'aria' };
 function koshi(breath){ koshiChime(BREATH_CHIME[breath] || 'terra'); }
 function koshiChime(name){
+  if (state.soundOn === false) return;
   try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)()); if (ctx.state === 'suspended') ctx.resume();
     const rods = KOSHI[name] || KOSHI.terra;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200; lp.Q.value = .3;
