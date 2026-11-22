@@ -134,6 +134,8 @@
   .crumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
   .crumbs span { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; color: var(--muted); border-bottom: 1px solid transparent; padding-bottom: 2px; }
   .crumbs span.on { color: var(--charcoal); border-bottom-color: var(--charcoal); }
+  .breath-done { text-align: center; margin: -8px 0 20px; }
+  .breath-done .note { margin-top: 10px; }
   .alt-breath { text-align: center; margin: -14px 0 24px; }
   .alt-open { margin-top: 2px; }
   .alt-label { font-family: var(--l); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
@@ -438,6 +440,14 @@
           <div class="breath-progress"><span id="audio-fill"></span></div>
           <div class="note" id="breath-count">About 60 to 90 seconds</div>
         </div>
+        <!-- When the breath ends: breathe again (up to 3 more times), or on to the move. Moves on by itself after 6s. -->
+        <div class="breath-done" id="breath-done" style="display:none">
+          <div class="actions thumb" style="justify-content:center">
+            <button class="btn" onclick="toMove()">On to my move</button>
+            <button class="btn ghost" id="again-btn" onclick="breatheAgain()">Breathe again</button>
+          </div>
+          <p class="note" id="done-note"></p>
+        </div>
         <!-- Studio members only: two other breaths for this block -->
         <div class="alt-breath" id="alt-breath" style="display:none">
           <button class="pill" id="alt-toggle" onclick="openAltBreaths()">Prefer a different breath? <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -447,7 +457,7 @@
             <button class="quiet" id="alt-keep" onclick="keepBreath()">Keep this breath</button>
           </div>
         </div>
-        <div class="actions thumb" style="justify-content:center">
+        <div class="actions thumb" id="breath-actions" style="justify-content:center">
           <button class="btn" id="breath-btn" onclick="toggleBreath()">Pause</button>
           <button class="quiet" onclick="setStep('move')">Skip to my move <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </div>
@@ -1073,7 +1083,7 @@ function renderBlocks(){
 
 function startOrResume(){ state.block ? (go('session'), setStep(state.step)) : startSession('teeth'); }
 function startSession(id){
-  state.sid = 's' + Date.now().toString(36); track('block_chosen',{block:id});
+  state.sid = 's' + Date.now().toString(36); state.repeats = 0; track('block_chosen',{block:id});
   state.block = id; state.tried = 'move'; state.felt = null; state.blockAt = Date.now(); go('session');
   const b = blockById(id);
   setBreath(state.forceBreath || chooseBreath(id)); state.forceBreath = null;
@@ -1091,7 +1101,7 @@ function setStep(step){
   if (step !== 'flow') stopTimer();
   state.step = step;
   ['breathe','move','else','flow','log'].forEach(s => { const el = $('step-'+s); el.style.display = s===step ? 'block' : 'none'; el.classList.remove('step-in'); if (s===step) { void el.offsetWidth; el.classList.add('step-in'); } });
-  if (step === 'breathe') autoBreath(); else cancelCountdown();
+  if (step === 'breathe') { hideBreathDone(); autoBreath(); } else { cancelCountdown(); clearTimeout(state.doneT); }
   if (step === 'move') playCue(); else { (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
   applyView();
   if (step === 'else') offerElse();
@@ -1373,7 +1383,7 @@ function startBreath(){
     c.style.backgroundColor = duskColor((rounds + i/pat.length) / (BREATHS[state.breath].rounds || 6));
     c.style.transform = word === 'Sip' ? 'scale(1.05)' : word.startsWith('In') ? 'scale(.95)' : word === 'Hold' ? c.style.transform : 'scale(.6)';
     i = (i+1) % pat.length; if (i === 0) { rounds++; $('breath-count').textContent = `Round ${rounds} done`; $('audio-fill').style.width = (rounds/(BREATHS[state.breath].rounds||6)*100)+'%'; }
-    if (rounds >= (BREATHS[state.breath].rounds || 6)) { stopBreath(); $('circle-word').textContent = 'Done'; koshiChime('terra'); state.doneChimeSid = state.sid; setTimeout(()=>{ if(state.step==='breathe') setStep('move'); }, 1200); return; }
+    if (rounds >= (BREATHS[state.breath].rounds || 6)) { stopBreath(); $('circle-word').textContent = 'Done'; koshiChime('terra'); state.doneChimeSid = state.sid; breathDone(); return; }
     state.btid = setTimeout(tick, secs*1000);
   };
   tick();
@@ -1409,6 +1419,23 @@ function keepBreath(){ $('alt-open').style.display = 'none'; $('alt-toggle').sty
 function switchBreath(id){
   track('breath_switched', { from: state.breath, to: id });
   setBreath(id); renderAltBreath(); autoBreath();
+}
+/* Breathe again: after a breath ends they can go through it again up to 3 more times. The screen moves on to
+   Your move by itself after 6 seconds. After the third repeat there's no button, just a nudge toward the work. */
+const MAX_REPEATS = 3, DONE_WAIT = 6000;
+function breathDone(){
+  const left = MAX_REPEATS - (state.repeats || 0);
+  $('breath-actions').style.display = 'none'; $('alt-breath').style.display = 'none'; $('breath-done').style.display = 'block';
+  $('again-btn').style.display = left > 0 ? '' : 'none';
+  $('again-btn').textContent = left > 0 ? `Breathe again${left < MAX_REPEATS ? ` (${left} left)` : ''}` : '';
+  $('done-note').textContent = left > 0 ? 'Moving on to your move in a moment.' : "That's plenty of breath. Your work is waiting.";
+  clearTimeout(state.doneT); state.doneT = setTimeout(() => { if (state.step === 'breathe') toMove(); }, DONE_WAIT);
+}
+function hideBreathDone(){ clearTimeout(state.doneT); $('breath-done').style.display = 'none'; $('breath-actions').style.display = ''; }
+function toMove(){ hideBreathDone(); setStep('move'); }
+function breatheAgain(){
+  state.repeats = (state.repeats || 0) + 1; track('breath_again', { breath: state.breath, repeat: state.repeats });
+  hideBreathDone(); state.doneChimeSid = null; setBreath(state.breath); autoBreath();
 }
 function chooseBreath(block){
   const fallback = blockById(block).breath;
@@ -1548,7 +1575,7 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
 function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
   track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI(); setStep('log'); }
-function stopTimers(){ stopTimer(); stopBreath(); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
+function stopTimers(){ stopTimer(); stopBreath(); clearTimeout(state.doneT); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
 
 /* log */
 function saveLog(felt){
