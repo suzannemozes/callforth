@@ -134,15 +134,23 @@
   .crumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
   .crumbs span { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; color: var(--muted); border-bottom: 1px solid transparent; padding-bottom: 2px; }
   .crumbs span.on { color: var(--charcoal); border-bottom-color: var(--charcoal); }
+  .alt-breath { text-align: center; margin: -14px 0 24px; }
+  .alt-open { margin-top: 2px; }
+  .alt-label { font-family: var(--l); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .alt-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; margin-bottom: 6px; }
+  .alt-card { font: inherit; color: inherit; cursor: pointer; background: var(--panel); border: 1px solid var(--stone); padding: 16px 18px; text-align: left; }
+  .alt-card:hover, .alt-card:focus-visible { border-color: var(--charcoal); }
+  .alt-card .t { font-family: var(--h); font-size: 1.15rem; line-height: 1.2; }
+  .alt-card .d { font-size: .95rem; color: var(--muted); margin-top: 4px; }
   .breath { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 34px 0; }
-  .circle { width: 200px; height: 200px; border: 1px solid var(--charcoal); border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: scale(.6); transition: transform 4s ease-in-out; background: var(--panel); }
+  .circle { width: min(400px, 86vw); height: min(400px, 86vw); border: 1px solid var(--charcoal); border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: scale(.6); transition: transform 4s ease-in-out; background: var(--panel); }
   /* The circle carries the timer bar's dawn-to-dusk colors: it starts blush and deepens round by round toward dusk blue */
   .circle { background-color: #EFE3DA; background-image: radial-gradient(circle at 38% 32%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%); border-color: rgba(28,28,28,.35);
     transition-property: transform, background-color; }
   body.dark .circle { filter: brightness(.82) saturate(.9); border-color: rgba(237,233,226,.25); }
   body.dark .circle span { color: #1C1C1C; }
-  .circle span { font-family: var(--l); text-transform: uppercase; letter-spacing: .16em; font-size: .72rem; }
-  .circle span.count { font-family: var(--h); font-size: 3.4rem; letter-spacing: 0; line-height: 1; }
+  .circle span { font-family: var(--l); text-transform: uppercase; letter-spacing: .16em; font-size: 1.1rem; }
+  .circle span.count { font-family: var(--h); font-size: 6rem; letter-spacing: 0; line-height: 1; }
   details { border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); padding: 14px 0; margin: 20px 0; }
   summary { cursor: pointer; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .7rem; color: var(--bronze); }
   details p { margin-top: 12px; }
@@ -155,8 +163,10 @@
   .cue { cursor: pointer; padding: 10px 0 18px; }
   .cue1 .big { font-family: var(--h); font-weight: 900; font-size: clamp(3rem, 11vw, 5.6rem); line-height: 1.02; letter-spacing: -.01em; margin: 0; }
   .cue1 .small { font-family: var(--b); font-style: italic; font-size: clamp(1.2rem, 3.4vw, 1.6rem); color: var(--muted); margin: 22px 0 0; }
-  .cue2 p { font-family: var(--b); font-style: italic; font-weight: 400; font-size: clamp(2rem, 6.6vw, 3.5rem); line-height: 1.15; margin: 0 0 .45em; opacity: 0; transform: translateY(6px); transition: opacity 1.4s ease, transform 1.4s ease; }
+  .cue2 p { font-family: var(--b); font-style: italic; font-weight: 400; font-size: clamp(2rem, 6.6vw, 3.5rem); line-height: 1.15; margin: 0 0 .45em; opacity: 0; transform: translateY(6px); color: #2E8A7E; transition: opacity 1.4s ease, transform 1.4s ease, color 1.6s ease; }
   .cue2 p.in { opacity: 1; transform: none; }
+  .cue2 p.past { color: #B4AEA5; }
+  body.dark .cue2 p { color: #6CC0B3; } body.dark .cue2 p.past { color: #6B655D; }
   .cue .hint { font-family: var(--l); font-style: normal; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 2.2em; transition: opacity 1.2s ease; }
   .cue2 { cursor: default; } .cue2 .hint { opacity: 0; } .cue2.ready { cursor: pointer; } .cue2.ready .hint { opacity: 1; }
   .prompt .label { font-size: .9rem; letter-spacing: .2em; }
@@ -427,6 +437,15 @@
           <div class="circle" id="circle"><span id="circle-word">Ready</span></div>
           <div class="breath-progress"><span id="audio-fill"></span></div>
           <div class="note" id="breath-count">About 60 to 90 seconds</div>
+        </div>
+        <!-- Studio members only: two other breaths for this block -->
+        <div class="alt-breath" id="alt-breath" style="display:none">
+          <button class="pill" id="alt-toggle" onclick="openAltBreaths()">Prefer a different breath? <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="alt-open" id="alt-open" style="display:none">
+            <div class="alt-label">Two other breaths for today</div>
+            <div class="alt-cards" id="alt-cards"></div>
+            <button class="quiet" id="alt-keep" onclick="keepBreath()">Keep this breath</button>
+          </div>
         </div>
         <div class="actions thumb" style="justify-content:center">
           <button class="btn" id="breath-btn" onclick="toggleBreath()">Pause</button>
@@ -1306,18 +1325,21 @@ async function keepAwake(on){
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('focus')) { state.wake = null; keepAwake(true); } });
 /* Your move: show the cue, then hand over to the prompt (CSS does the timing). */
-/* Your move, in three stages. Stage 1 for 4s (tap to go on sooner). Stage 2 holds at least 15s and can't be tapped past:
-   its three lines arrive at 0.6s, 4s and 7.5s, and at 15s "Tap when you're ready" appears and it waits for that tap. Then 3 stays.
+/* Your move, in three stages. Stage 1 for 4s (tap to go on sooner). Stage 2 can't be tapped past: its three lines arrive
+   in verdigris at 0.6s, 5s and 9.5s, each earlier line softening to light gray as the next arrives; the last softens 10s
+   after it arrives (19.5s), and then "Tap when you're ready" appears and it waits for that tap. Then 3 stays.
    A different Koshi chime marks each stage: Terra (ground), Aqua (clear), Ignis (begin). Plays once per session;
    coming back from "Try something else" goes straight to the move. */
-const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_MIN = 15000;
+const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_LINES = [600, 5000, 9500], CLEAR_LAST = 10000;
 function cueShow(n){
   state.cueStage = n; (state.cueTs || []).forEach(clearTimeout); state.cueTs = [];
   [1,2,3].forEach(i => $('cue'+i).classList.toggle('on', i === n));
-  if (state.cueChime !== false) koshiChime(CUE_CHIMES[n-1]);
+  // Terra marks the end of the breath ('Done'); stage 1 only plays it when the breath was skipped.
+  if (state.cueChime !== false && !(n === 1 && state.doneChimeSid === state.sid)) koshiChime(CUE_CHIMES[n-1]);
   if (n === 2) { const c = $('cue2'), ps = c.querySelectorAll('p'); c.classList.remove('ready'); ps.forEach(p => p.classList.remove('in'));
-    [600, 4000, 7500].forEach((ms, i) => state.cueTs.push(setTimeout(() => ps[i] && ps[i].classList.add('in'), ms)));
-    state.cueTs.push(setTimeout(() => c.classList.add('ready'), CLEAR_MIN)); }
+    ps.forEach(p => p.classList.remove('past'));
+    CLEAR_LINES.forEach((ms, i) => state.cueTs.push(setTimeout(() => { if (ps[i-1]) ps[i-1].classList.add('past'); if (ps[i]) ps[i].classList.add('in'); }, ms)));
+    state.cueTs.push(setTimeout(() => { const last = ps[ps.length-1]; if (last) last.classList.add('past'); c.classList.add('ready'); }, CLEAR_LINES[CLEAR_LINES.length-1] + CLEAR_LAST)); }
   if (n === 1) state.cueTs.push(setTimeout(() => cueShow(2), CUE_HOLD));
   track('move_stage', { stage: n });
 }
@@ -1351,13 +1373,43 @@ function startBreath(){
     c.style.backgroundColor = duskColor((rounds + i/pat.length) / (BREATHS[state.breath].rounds || 6));
     c.style.transform = word === 'Sip' ? 'scale(1.05)' : word.startsWith('In') ? 'scale(.95)' : word === 'Hold' ? c.style.transform : 'scale(.6)';
     i = (i+1) % pat.length; if (i === 0) { rounds++; $('breath-count').textContent = `Round ${rounds} done`; $('audio-fill').style.width = (rounds/(BREATHS[state.breath].rounds||6)*100)+'%'; }
-    if (rounds >= (BREATHS[state.breath].rounds || 6)) { stopBreath(); $('circle-word').textContent = 'Done'; setTimeout(()=>{ if(state.step==='breathe') setStep('move'); }, 1200); return; }
+    if (rounds >= (BREATHS[state.breath].rounds || 6)) { stopBreath(); $('circle-word').textContent = 'Done'; koshiChime('terra'); state.doneChimeSid = state.sid; setTimeout(()=>{ if(state.step==='breathe') setStep('move'); }, 1200); return; }
     state.btid = setTimeout(tick, secs*1000);
   };
   tick();
 }
 function stopBreath(){ state.breathing = false; clearTimeout(state.btid); if (state.breath) $('breath-btn').textContent = breathLabel(); }
 /* One breath per session. Studio members get the breath that has helped them most for this block; everyone else gets the block's breath. */
+/* Studio: two other breaths per block, chosen by intention [Suz to confirm]. If a member's learned breath is showing,
+   the block's own breath is offered first. Picking one restarts the countdown with that breath. */
+const ALT_BREATHS = { teeth:['exhale','belly'], blank:['exhale','box'], next:['box','vagal'], real:['lion','pursed'],
+  mood:['bee','box'], tired:['lion','box'], over:['bee','exhale'], under:['bee','box'] };
+const ALT_LINE = { box:'In 4, hold 4, out 4, hold 4. Steady and even.', vagal:'In, a sip more, then a long sigh out.', lion:'In, then a big "haaa." Shakes it loose.',
+  bee:'In, then a low hum out. Quiets the noise.', four78:'In 4, hold 7, out 8. Deeply settling.', belly:'In 4, out 6. Slow and low, into the belly.',
+  exhale:'In 4, out 8. Settles a keyed-up body.', pursed:'In 2, out 4 through pursed lips. Slows things down.' };
+function altBreaths(){
+  const blk = BLOCKS.find(b => b.id === state.block); if (!blk) return [];
+  let list = (ALT_BREATHS[blk.id] || []).slice();
+  if (blk.breath !== state.breath) list = [blk.breath, ...list];
+  return list.filter((b, i) => b !== state.breath && BREATHS[b] && list.indexOf(b) === i).slice(0, 2);
+}
+function renderAltBreath(){
+  const box = $('alt-breath'), alts = altBreaths();
+  box.style.display = (state.member && alts.length) ? 'block' : 'none';
+  $('alt-open').style.display = 'none'; $('alt-toggle').style.display = '';
+  $('alt-keep').textContent = 'Keep the ' + BREATHS[state.breath].short;
+  $('alt-cards').innerHTML = alts.map(b => `<button class="alt-card" onclick="switchBreath('${b}')"><div class="t">${BREATHS[b].name}</div><div class="d">${ALT_LINE[b] || ''}</div></button>`).join('');
+}
+function openAltBreaths(){
+  if (state.counting) cancelCountdown(); else if (state.breathing) stopBreath();
+  $('alt-toggle').style.display = 'none'; $('alt-open').style.display = 'block';
+  track('alt_breath_opened', { breath: state.breath });
+}
+function keepBreath(){ $('alt-open').style.display = 'none'; $('alt-toggle').style.display = ''; if (!state.breathStarted) autoBreath(); }
+function switchBreath(id){
+  track('breath_switched', { from: state.breath, to: id });
+  setBreath(id); renderAltBreath(); autoBreath();
+}
 function chooseBreath(block){
   const fallback = blockById(block).breath;
   if (!state.member || !state.showHistory) return fallback;
@@ -1374,6 +1426,7 @@ function setBreath(id){
   $('audio-fill').style.width = '0';
   $('circle-word').textContent = 'Ready'; $('circle').style.transform = 'scale(.6)'; $('circle').style.backgroundColor = ''; $('breath-count').textContent = 'About 60 to 90 seconds';
   $('breath-btn').textContent = breathLabel();
+  renderAltBreath();
 }
 
 /* try something else */

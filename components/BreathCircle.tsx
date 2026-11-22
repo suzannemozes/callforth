@@ -10,7 +10,8 @@
  *   (blush -> ochre -> sage -> teal -> dusk blue), lit softly from the upper left.
  * - A small progress bar in the same palette fills one step per round; "Round N done" below.
  * - Main button: "Pause" (during the countdown or breath), then "Begin again" (replays the chime and restarts).
- * - When all rounds are done it shows "Done" and calls onComplete() after 1.2s.
+ * - When all rounds are done it shows "Done", plays the Terra chime (the cue that the page is about to change)
+ *   and calls onComplete() after 1.2s.
  * - Reduced motion: no growing or shrinking, the words and colors still guide the breath.
  *
  * Usage (the breath's timing comes from the app's content file, src/lib/content.ts,
@@ -100,7 +101,7 @@ export default function BreathCircle({ timing, onComplete, onSkip }: {
       if (i === 0) { r += 1; setRounds(r); }
       if (r >= b.rounds) {
         timer.current = window.setTimeout(() => {
-          setMode('done'); setWord('Done');
+          setMode('done'); setWord('Done'); playKoshi('terra');
           timer.current = window.setTimeout(() => doneRef.current(), 1200);
         }, secs * 1000);
         return;
@@ -143,7 +144,7 @@ export default function BreathCircle({ timing, onComplete, onSkip }: {
       <div
         aria-live="polite"
         style={{
-          width: 200, height: 200, borderRadius: '50%',
+          width: 'min(400px, 86vw)', height: 'min(400px, 86vw)', borderRadius: '50%',
           border: '1px solid rgba(28,28,28,.35)',
           backgroundColor: color,
           backgroundImage: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%)',
@@ -153,8 +154,8 @@ export default function BreathCircle({ timing, onComplete, onSkip }: {
         }}
       >
         <span style={isCount
-          ? { fontFamily: '"Playfair Display", serif', fontSize: '3.4rem', lineHeight: 1, color: '#1C1C1C' }
-          : { fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '.16em', fontSize: '.72rem', color: '#1C1C1C' }}>
+          ? { fontFamily: '"Playfair Display", serif', fontSize: '6rem', lineHeight: 1, color: '#1C1C1C' }
+          : { fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: '.16em', fontSize: '1.1rem', color: '#1C1C1C' }}>
           {word}
         </span>
       </div>

@@ -93,3 +93,28 @@ export const BLOCK_BREATH = {
   "I'm understimulated": 'lion',
   "My inner critic is too loud": 'pursed', // later door, not shown yet
 };
+
+/** Studio members only: two other breaths offered for each block ("Prefer a different breath?"). [Suz to confirm]
+ *  If a member's learned breath is showing instead of the block's own, offer the block's own breath first. */
+export const ALT_BREATHS = {
+  "I'd rather pull my teeth out": ['exhale', 'belly'],
+  "I'm afraid of the white, blank space": ['exhale', 'box'],
+  "I don't know what comes next": ['box', 'vagal'],
+  "I'm not a real artist": ['lion', 'pursed'],
+  "I'm not in the mood": ['bee', 'box'],
+  "I'm exhausted": ['lion', 'box'],
+  "I'm overstimulated": ['bee', 'exhale'],
+  "I'm understimulated": ['bee', 'box'],
+};
+
+/** One short line for each breath on its choice card. */
+export const ALT_LINE = {
+  box: 'In 4, hold 4, out 4, hold 4. Steady and even.',
+  vagal: 'In, a sip more, then a long sigh out.',
+  lion: 'In, then a big "haaa." Shakes it loose.',
+  bee: 'In, then a low hum out. Quiets the noise.',
+  four78: 'In 4, hold 7, out 8. Deeply settling.',
+  belly: 'In 4, out 6. Slow and low, into the belly.',
+  exhale: 'In 4, out 8. Settles a keyed-up body.',
+  pursed: 'In 2, out 4 through pursed lips. Slows things down.',
+};
