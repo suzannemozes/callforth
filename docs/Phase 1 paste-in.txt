@@ -79,7 +79,7 @@ Here is the App Brief:
 
 **Footer (every page except the Daily light):** a hairline rule, then the "How it works" pill (hidden during a session, to keep focus), the italic line "Call Forth supports a creative practice. It is for information, not medical or mental health advice." and a small "© 2027 Suzanne Mozes" in Oswald capitals.
 
-**Page changes:** every new page and every session step settles in calmly, like a slow exhale: a soft fade, a small 10px rise and a breath of blur clearing, over about half a second (0.45 seconds for session steps), easing out gently. Off for people whose device asks for reduced motion.
+**Page changes:** every new page and every session step settles in calmly, like a slow exhale: a soft fade, a small 10px rise and a breath of blur clearing, over about half a second (0.45 seconds for session steps), easing out gently. Off for people whose device asks for reduced motion. The fade must leave nothing behind when it ends (animation fill-mode "backwards", not "both"): a lingering transform or blur on the page traps full-screen pieces, such as the Daily light and the pinned phone buttons, inside the page instead of the screen.
 
 **Book a consult:** every "Book a consult" button (the occasional consult panel on the Log and Studio pages, and the About page) opens Suz's scheduling page on Stan in a new tab: [Stan booking link].
 

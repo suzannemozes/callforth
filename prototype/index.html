@@ -51,10 +51,10 @@
   main { max-width: 1040px; margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(18px, 5vw, 48px); }
   .screen { display: none; }
   /* Calm page changes: each new page settles in like a slow exhale (a soft fade, a small rise, a breath of blur clearing) */
-  .screen.on { display: block; animation: settle .55s cubic-bezier(.22,.61,.36,1) both; }
+  .screen.on { display: block; animation: settle .55s cubic-bezier(.22,.61,.36,1) backwards; }
   @keyframes settle { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } 60% { filter: blur(0); } to { opacity: 1; transform: none; filter: none; } }
   @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .step-in { animation: settle .45s cubic-bezier(.22,.61,.36,1) both; }
+  .step-in { animation: settle .45s cubic-bezier(.22,.61,.36,1) backwards; }
   @media (prefers-reduced-motion: reduce) { .screen.on, .step-in { animation: none; } }
   /* Phones: the main action of each session step sits in thumb reach at the bottom of the screen */
   @media (max-width: 760px) {
