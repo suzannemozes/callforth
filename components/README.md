@@ -29,3 +29,15 @@ const br = BREATHS[breathId];
 So changing a count, adding a round or adding a new breath means editing `content.ts` only. Pattern words: `In` grows the circle, `Sip` grows it a touch more, `Hold` keeps it still, anything else (`Out`, `Haaa`, `Hum`) shrinks it. `chime` is one of `'terra' | 'aqua' | 'aria' | 'ignis'`. Give it a new `key` to restart it for a new session or breath; it ignores ordinary re-renders, so it never restarts mid-breath. `PROTOTYPE_TIMINGS` in the file is a reference copy of the prototype's timings, for checking only.
 
 It needs React 18+ and nothing else. It passes TypeScript with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. The buttons use the app's existing `btn` and `quiet` classes.
+
+## TimerPicture.tsx
+
+The picture on the Make step: one of four (ring, sun, rising fill, one dot at a time), chosen at random each time a timer starts, never the same twice in a row. Copy it exactly as it is.
+
+```tsx
+import TimerPicture, { pickTimerPicture } from './components/TimerPicture';
+const kind = pickTimerPicture(lastKind);   // when the timer starts; save it as lastKind
+<TimerPicture kind={kind} done={1 - secondsLeft / totalSeconds} clock="9:00" showClock={showNumbers} over={keptGoing} dark={darkRoom} />
+```
+
+Show "9 min left" beneath it (hidden when numbers are off; "Still going" after Keep going). It has no sound and needs no other files.

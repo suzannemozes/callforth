@@ -139,6 +139,10 @@
   .resume .note { margin-top: 12px; }
   #else-choices.chosen .choice:not(.on) { display: none; }
   #else-choices.chosen { grid-template-columns: 1fr; }
+  .stop-log { margin-top: 26px; display: none; }
+  .stop-log-btn { font: inherit; font-family: var(--b); font-style: italic; font-size: .92rem; color: var(--muted); background: none; border: 0; padding: 10px 0; cursor: pointer; }
+  .stop-log-btn:hover, .stop-log-btn:focus-visible { color: var(--charcoal); }
+  .stop-log.done .stop-log-btn { cursor: default; color: var(--charcoal); }
   .breath-done { text-align: center; margin: -8px 0 20px; }
   .breath-done .note { margin-top: 10px; }
   .alt-breath { text-align: center; margin: -14px 0 24px; }
@@ -191,15 +195,26 @@
   .timer { font-family: var(--h); font-size: 4.4rem; text-align: center; margin: 22px 0 12px; letter-spacing: .02em; }
   .timer.over { color: var(--bronze); }
   .over-note { text-align: center; font-family: var(--l); text-transform: uppercase; letter-spacing: .15em; font-size: .7rem; color: var(--bronze); margin: -6px 0 14px; }
-  /* 2. Frame timer: a thin line draws itself around the edge of the screen */
-  /* 2. Dawn-to-dusk bar: a wide band that fills left to right, shifting blush, ochre, sage, dusk blue as time passes */
-  .tbar-wrap { display: none; margin: 34px 0 22px; }
-  .tbar { position: relative; height: 64px; background: #ECE8E1; border: 1px solid var(--stone); overflow: hidden; }
-  .tbar-fill { position: absolute; inset: 0 auto 0 0; width: 0; transition: width 1s linear;
-    background: linear-gradient(90deg,#E9D3C6 0%,#E3C892 30%,#B9C49A 55%,#8DBAB0 78%,#6E9FAE 100%); background-size: var(--bw, 600px) 100%; background-repeat: no-repeat; }
-  .tbar-fill::after { content: ""; position: absolute; right: -30px; top: 0; bottom: 0; width: 30px; background: linear-gradient(90deg, rgba(255,255,255,.35), rgba(255,255,255,0)); }
+  /* The timer picture: one of four, chosen at random each time (never the same twice in a row), all in the
+     dawn-to-dusk colors: a ring that fills around the clock, a sun crossing a low arc, a circle slowly filling,
+     or one dot lighting at a time. The clock sits inside (hidden when numbers are off). */
+  .tbar-wrap { display: none; margin: 18px 0 16px; }
   .tbar-cap { text-align: center; font-style: italic; color: var(--muted); margin-top: 10px; }
-  body.dark .tbar { background: #2A2825; } body.dark .tbar-fill { filter: brightness(.82) saturate(.9); }
+  .tm { position: relative; width: min(320px, 78vw); aspect-ratio: 1; margin: 0 auto; display: grid; place-items: center; }
+  .tm .clock { font-family: var(--h); font-size: 3.6rem; letter-spacing: .02em; position: relative; z-index: 2; }
+  .tm .clock.over { color: var(--bronze); }
+  .viz-ring { position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from -90deg, #E9D3C6 0turn, #E3C892 .3turn, #B9C49A .55turn, #8DBAB0 .78turn, #6E9FAE 1turn);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); }
+  .viz-ring-track { position: absolute; inset: 0; border-radius: 50%; background: #ECE8E1;
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)); }
+  .viz-fill { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(28,28,28,.22); overflow: hidden; background: #F7F3EE; }
+  .viz-fill .water { position: absolute; left: -10%; right: -10%; bottom: 0; height: 0; transition: height 1s linear, background-color 2s linear; }
+  .viz-fill .water::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 20px; border-radius: 50%; background: inherit; }
+  .viz-dots i { position: absolute; width: 16px; height: 16px; margin: -8px; border-radius: 50%; background: #E5E0D8; transition: background-color 1.2s ease; }
+  .viz-sun { width: min(520px, 92vw); margin: 0 auto; display: block; overflow: visible; }
+  body.dark .viz-ring-track { background: #2A2825; } body.dark .viz-fill { background: #262523; border-color: rgba(237,233,226,.2); }
+  body.dark .viz-dots i { background: #3B3834; } body.dark .viz-ring, body.dark .viz-fill .water, body.dark .viz-sun { filter: brightness(.85) saturate(.9); }
   body.dark .tbar-fill::after { display: none; }
   body.barview .timer { display: none; } body.barview .tbar-wrap { display: block; }
   /* 1. Gentle end of the timer */
@@ -518,7 +533,7 @@
       <div id="step-flow">
         <h2 style="margin-top:8px;text-align:center">Make the thing.</h2>
         <div class="timer" id="timer">15:00</div>
-        <div class="tbar-wrap" id="tbar-wrap"><div class="tbar"><div class="tbar-fill" id="tbar-fill"></div></div><p class="tbar-cap" id="tbar-cap">15 min left</p></div>
+        <div class="tbar-wrap" id="tbar-wrap"><div id="tviz"></div><p class="tbar-cap" id="tbar-cap">15 min left</p></div>
         <p class="over-note" id="over-note" style="display:none">Still going</p>
         <div class="time-up" id="time-up">
           <h3>Time.</h3>
@@ -546,7 +561,7 @@
           </div>
           <div class="chips" id="view-chips">
             <button class="chip" data-view="clock" onclick="setView('clock')">Show the clock</button>
-            <button class="chip" data-view="bar" onclick="setView('bar')">Show the bar</button>
+            <button class="chip" data-view="bar" onclick="setView('bar')">Show the picture</button>
           </div>
           <p class="note" style="text-align:center;margin:0">Call Forth will remember this for next time.</p>
         </div>
@@ -564,6 +579,7 @@
           <button class="btn felt f3" onclick="saveLog('not')">Not today</button>
         </div>
         <p style="margin-top:14px"><button class="quiet" onclick="skipLog()">Skip <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></p>
+        <p class="stop-log" id="stop-log"><button class="stop-log-btn" onclick="stopAskingLog()">Rather not log after making? Stop asking me.</button></p>
       </div>
     </div>
   </section>
@@ -667,6 +683,10 @@
       <div class="setting">
         <div><h3>Show my log history</h3><p class="note" style="font-style:normal;margin:4px 0 0">Your past sessions, patterns and "last time you felt this."</p></div>
         <button class="switch" role="switch" id="sw-history" onclick="setPref('showHistory', !state.showHistory)"><span></span></button>
+      </div>
+      <div class="setting" id="set-asklog">
+        <div><h3>Ask me to log after making</h3><p class="note" style="font-style:normal;margin:4px 0 0">The "What did you make?" page after the timer. Off: your sessions still save on their own (date, block, minutes, breath), just without a note or a rating.</p></div>
+        <button class="switch" role="switch" id="sw-asklog" onclick="setPref('askLog', !state.askLog)"><span></span></button>
       </div>
       <div class="label" style="margin-top:34px">What you hear</div>
       <div class="setting">
@@ -962,7 +982,7 @@ const OPTIONS = {
 };
 
 
-const state = { daysThisMonth: 11, timerView:'clock', hours:{days:[], time:'09:00', len:15, email:true, set:false}, hoursOffered:false, member:false, showNumbers:true, showHistory:true, soundOn:true, useAudio:true, sound:'Silence', name:'Maya', disciplines:['writing'], customTags:[], practiced:'12 years', visits:12, consultMonth:null, consultThisVisit:false, forceConsult:false, block:null, step:'breathe', len:15, left:15*60, running:false, tid:null, btid:null, breathing:false,
+const state = { daysThisMonth: 11, timerView:'bar', hours:{days:[], time:'09:00', len:15, email:true, set:false}, hoursOffered:false, member:false, showNumbers:true, showHistory:true, soundOn:true, askLog:true, useAudio:true, sound:'Silence', name:'Maya', disciplines:['writing'], customTags:[], practiced:'12 years', visits:12, consultMonth:null, consultThisVisit:false, forceConsult:false, block:null, step:'breathe', len:15, left:15*60, running:false, tid:null, btid:null, breathing:false,
   log:[
     { when:'Yesterday', block:'teeth', mins:15, breath:'box', tried:'move', felt:'helped', what:'Finally opened the essay. 400 words, half of them good.' },
     { when:'Monday', block:'blank', mins:25, breath:'vagal', tried:'move', felt:'helped', what:'Three ugly sketches, then one I like.' },
@@ -1053,6 +1073,7 @@ function renderSettings(){
     : state.hours.set ? hoursSummary() : 'Set regular times. Your calendar reminds you, and one tap opens your session.';
   $('hours-btn').textContent = state.member ? (state.hours.set ? 'Change' : 'Set') : 'Full studio';
   $('sw-numbers').setAttribute('aria-checked', state.showNumbers); $('sw-history').setAttribute('aria-checked', state.showHistory); $('sw-sound').setAttribute('aria-checked', state.soundOn !== false);
+  $('set-asklog').style.display = state.member ? '' : 'none'; $('sw-asklog').setAttribute('aria-checked', state.askLog !== false);
 }
 function signIn(){ state.visits++; decideConsult(); newVisit(); go('register'); }
 function register(){
@@ -1551,13 +1572,13 @@ function toggleTimerPanel(){ const p = $('timer-panel'); const open = p.style.di
 function beginMaking(){
   resetFlowUI(); state.lastMins = null;
   setStep('flow'); $('timer-panel').style.display = 'none'; renderTimerPanel();
-  state.left = state.len*60; renderTimer(); startTimer();
+  state.left = state.len*60; pickViz(); renderTimer(); startTimer();
 }
 function renderTimer(){
   const secs = state.over ? state.len*60 + state.extra : Math.max(0, state.left), m = Math.floor(secs/60), s = secs%60;
   $('timer').textContent = `${m}:${String(s).padStart(2,'0')}`; $('timer').classList.toggle('over', !!state.over);
-  const f = $('tbar-fill'); if (f) { const done = state.over ? 1 : 1 - Math.max(0,state.left)/(state.len*60);
-    f.style.width = (done*100) + '%'; f.style.setProperty('--bw', f.parentElement.clientWidth + 'px');
+  { const done = state.over ? 1 : 1 - Math.max(0,state.left)/(state.len*60);
+    renderViz(done, `${m}:${String(s).padStart(2,'0')}`);
     const left = Math.ceil(Math.max(0,state.left)/60);
     $('tbar-cap').textContent = state.over ? 'Still going' : (left <= 1 ? 'Less than a minute left' : `${left} min left`);
     $('tbar-cap').style.visibility = (state.showNumbers || state.over) ? 'visible' : 'hidden'; }
@@ -1608,6 +1629,34 @@ function koshiChime(name){
   } catch(e) {}
 }
 /* 2. Clock or bar. People who hide their numbers get the bar. */
+const VIZ = ['ring','sun','fill','dots'];
+function pickViz(){ const opts = VIZ.filter(v => v !== state.lastViz); state.viz = opts[Math.floor(Math.random()*opts.length)]; state.lastViz = state.viz; state.vizBuilt = null; track('timer_picture',{picture: state.viz}); }
+function sunPt(t){ const W = 520, H = 190, a = Math.PI*(1-t); return [W/2 + (W/2-20)*Math.cos(a), H-10 - (H-40)*Math.sin(a)]; }
+function renderViz(done, clock){
+  const box = $('tviz'); if (!box) return; const k = state.viz || 'ring';
+  if (state.vizBuilt !== k) {
+    state.vizBuilt = k;
+    if (k === 'ring') box.innerHTML = '<div class="tm"><div class="viz-ring-track"></div><div class="viz-ring" id="vz-ring"></div><div class="clock" id="vz-clock"></div></div>';
+    if (k === 'fill') box.innerHTML = '<div class="tm"><div class="viz-fill"><div class="water" id="vz-water"></div></div><div class="clock" id="vz-clock"></div></div>';
+    if (k === 'dots') box.innerHTML = '<div class="tm viz-dots">' + Array.from({length:15}, (_, i) => { const a = -Math.PI/2 + 2*Math.PI*i/15; return `<i style="left:${50+44*Math.cos(a)}%;top:${50+44*Math.sin(a)}%"></i>`; }).join('') + '<div class="clock" id="vz-clock"></div></div>';
+    if (k === 'sun') { const full = Array.from({length:61}, (_, i) => sunPt(i/60).map(n => n.toFixed(1)).join(',')).join(' ');
+      box.innerHTML = `<svg class="viz-sun" viewBox="0 0 520 200" aria-hidden="true"><defs>
+        <linearGradient id="vz-dd" gradientUnits="userSpaceOnUse" x1="20" x2="500"><stop offset="0" stop-color="#E9D3C6"/><stop offset=".3" stop-color="#E3C892"/><stop offset=".55" stop-color="#B9C49A"/><stop offset=".78" stop-color="#8DBAB0"/><stop offset="1" stop-color="#6E9FAE"/></linearGradient>
+        <radialGradient id="vz-glow"><stop offset="0" stop-color="#E3C892" stop-opacity=".55"/><stop offset="1" stop-color="#E3C892" stop-opacity="0"/></radialGradient></defs>
+        <line x1="0" y1="180" x2="520" y2="180" stroke="#D8D2C7"/>
+        <polyline points="${full}" fill="none" stroke="#D8D2C7" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+        <polyline id="vz-trail" fill="none" stroke="url(#vz-dd)" stroke-width="3" stroke-linecap="round"/>
+        <circle id="vz-glowc" r="46" fill="url(#vz-glow)"/><circle id="vz-sunc" r="17"/></svg>`; }
+  }
+  const c = $('vz-clock'); if (c) { c.textContent = clock; c.style.visibility = (state.showNumbers || state.over) ? 'visible' : 'hidden'; c.classList.toggle('over', !!state.over); }
+  if (k === 'ring') $('vz-ring').style.webkitMaskImage = $('vz-ring').style.maskImage = `radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px)), conic-gradient(from -90deg, #000 ${done}turn, transparent ${done}turn)`;
+  if (k === 'ring') { $('vz-ring').style.webkitMaskComposite = 'source-in'; $('vz-ring').style.maskComposite = 'intersect'; }
+  if (k === 'fill') { const w = $('vz-water'); w.style.height = (done*100) + '%'; w.style.backgroundColor = duskColor(done); }
+  if (k === 'dots') { const lit = Math.round(done*15); document.querySelectorAll('.viz-dots i').forEach((d, i) => d.style.backgroundColor = i < lit ? duskColor(i/14) : ''); }
+  if (k === 'sun') { const [x, y] = sunPt(done); const pts = Array.from({length:41}, (_, i) => sunPt(done*i/40).map(n => n.toFixed(1)).join(',')).join(' ');
+    $('vz-trail').setAttribute('points', pts); ['vz-glowc','vz-sunc'].forEach(id => { $(id).setAttribute('cx', x.toFixed(1)); $(id).setAttribute('cy', y.toFixed(1)); });
+    $('vz-sunc').setAttribute('fill', duskColor(done)); }
+}
 function currentView(){ return state.showNumbers ? state.timerView : 'bar'; }
 function setView(v){ state.timerView = v; track('timer_view',{view:v}); applyView(); renderTimerPanel(); }
 function applyView(){ document.body.classList.toggle('barview', state.step === 'flow' && document.body.classList.contains('focus') && currentView() === 'bar'); renderTimer(); }
@@ -1618,13 +1667,25 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
   state.tid = setInterval(()=>{ if (state.over) { state.extra++; renderTimer(); return; } state.left--; renderTimer(); if (state.left <= 0) { stopTimer(); timeUp(); } }, 1000); }
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
 function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
-  track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI(); setStep('log'); }
+  track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI();
+  if (state.member && state.askLog === false) { autoSaveLog(); return; }
+  setStep('log'); $('stop-log').style.display = state.member ? 'block' : 'none'; $('stop-log').classList.remove('done');
+  $('stop-log').querySelector('button').textContent = 'Rather not log after making? Stop asking me.'; }
+/* Studio members can stop the Log it page. Their sessions still save on their own, without a note or rating. */
+function autoSaveLog(){ $('log-text').value = ''; track('log_auto', {}); saveLog(null, true); }
+function stopAskingLog(){
+  if ($('stop-log').classList.contains('done')) return;
+  state.askLog = false; track('settings_changed', { askLog: false });
+  $('stop-log').classList.add('done');
+  $('stop-log').querySelector('button').textContent = 'Done. Your sessions will save on their own. You can turn this back on in Settings.';
+  setTimeout(() => { if (state.step === 'log') saveLog(null, true); }, 2600);
+}
 function stopTimers(){ stopTimer(); stopBreath(); clearTimeout(state.doneT); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
 
 /* log */
-function saveLog(felt){
+function saveLog(felt, auto){
   state.felt = felt || null;
-  track('log_saved',{wrote_note: $('log-text').value.trim().length > 0, felt: state.felt, breath: state.breath, tried: state.tried});  /* never the text itself */
+  if (!auto) track('log_saved',{wrote_note: $('log-text').value.trim().length > 0, felt: state.felt, breath: state.breath, tried: state.tried});  /* never the text itself */
   const mins = state.lastMins || Math.max(1, Math.round((state.len*60 - state.left)/60)) || state.len;
   state.firstEver = state.log.length === 0; if (!state.loggedToday) { state.daysThisMonth++; state.loggedToday = true; }
   state.log.unshift({ when:'Today', block:state.block, mins, breath:state.breath, tried:state.tried, felt:state.felt, what: $('log-text').value.trim() || 'Showed up. Counts.' });
