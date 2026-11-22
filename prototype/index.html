@@ -531,7 +531,7 @@
 
       <!-- flow: starts the moment they tap "I'll try this" -->
       <div id="step-flow">
-        <h2 style="margin-top:8px;text-align:center">Make the thing.</h2>
+        <h2 style="margin-top:8px;text-align:center" id="flow-h">Make the thing.</h2>
         <div class="timer" id="timer">15:00</div>
         <div class="tbar-wrap" id="tbar-wrap"><div id="tviz"></div><p class="tbar-cap" id="tbar-cap">15 min left</p></div>
         <p class="over-note" id="over-note" style="display:none">Still going</p>
@@ -1132,7 +1132,7 @@ function renderBlocks(){
     $('home-q').textContent = 'Your work is still waiting.';
     $('resume-note').textContent = `Everything else opens again in ${left} minute${left === 1 ? '' : 's'}.`;
     track('resume_shown', { mins_left: left });
-  } else if (state.resume) state.resume = null;
+  } else { if (state.resume) state.resume = null; const rl = roundLine(); if (rl) $('home-q').textContent = rl; }
   const wrap = $('blocks'); wrap.innerHTML = '';
   BLOCKS.forEach(b => {
     const open = b.free || state.member;
@@ -1351,6 +1351,24 @@ function art(kind, a, b){
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${s}</svg>`;
 }
 /* Another timer: straight back to Make, same block, no breathing step. */
+/* Another round: when someone starts a second (or third) timed session within 12 hours, a rotating line
+   congratulates them, never the same twice in a row. It shows once per round: as the Home headline if they
+   come back through Home, or above the timer if they tap "Yes, another timer". */
+const ROUND_LINES = {
+  2: ["You can't get enough of us, we know. Well done.", "Again? We applaud you.", "A round of applause for you, {n}. Keep going.",
+      "Back for more, are we?", "We're so glad you're here for another round.", "You're back? Nice."],
+  3: ["You've found your rhythm. Keep going.", "We see you, and we see that you're starting your third round."],
+  4: ["You've found your rhythm. Keep going."]
+};
+const ROUND_HOURS = 12;
+function roundNum(){ const since = Date.now() - ROUND_HOURS*3600000; return (state.roundTimes || []).filter(x => x > since).length + 1; }
+function roundLine(){
+  const n = roundNum(); if (n < 2 || state.roundShown === n + ':' + (state.roundTimes||[]).length) return null;
+  const lines = ROUND_LINES[Math.min(n, 4)]; const opts = lines.filter(l => l !== state.lastRoundLine);
+  const line = (opts.length ? opts : lines)[Math.floor(Math.random() * (opts.length ? opts.length : lines.length))];
+  state.lastRoundLine = line; state.roundShown = n + ':' + (state.roundTimes||[]).length; track('round_line', { round: n });
+  return line.replace('{n}', state.name);
+}
 function anotherTimer(){
   track('another_timer',{yes:true});
   state.block = state.lastBlock || 'teeth'; state.tried = 'move'; state.felt = null;
@@ -1575,6 +1593,7 @@ function beginMaking(){
   resetFlowUI(); state.lastMins = null;
   setStep('flow'); $('timer-panel').style.display = 'none'; renderTimerPanel();
   state.left = state.len*60; pickViz(); renderTimer(); startTimer();
+  const rl = roundLine(); $('flow-h').textContent = rl || 'Make the thing.';
 }
 function renderTimer(){
   const secs = state.over ? state.len*60 + state.extra : Math.max(0, state.left), m = Math.floor(secs/60), s = secs%60;
@@ -1670,6 +1689,7 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
 function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
   track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI();
+  (state.roundTimes = state.roundTimes || []).push(Date.now());
   if (state.member && state.askLog === false) { autoSaveLog(); return; }
   setStep('log'); $('stop-log').style.display = state.member ? 'block' : 'none'; $('stop-log').classList.remove('done');
   $('stop-log').querySelector('button').textContent = 'Rather not log after making? Stop asking me.'; }
