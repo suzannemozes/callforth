@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Call Forth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Abril+Fatface&family=Bebas+Neue&family=Caveat:wght@600&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,wght@0,700;1,500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Abril+Fatface&family=Bebas+Neue&family=Caveat:wght@600&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
     --wall: #F4F2EE; --panel: #FFFFFF; --stone: #D8D2C7; --bronze: #8A5A2B;
@@ -146,21 +146,22 @@
   details { border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); padding: 14px 0; margin: 20px 0; }
   summary { cursor: pointer; font-family: var(--l); text-transform: uppercase; letter-spacing: .14em; font-size: .7rem; color: var(--bronze); }
   details p { margin-top: 12px; }
-  .move { font-family: var(--h); font-size: 1.5rem; line-height: 1.35; margin: 18px 0 26px; }
-  /* Your move: the "open your work" cue shows alone, then hands over to the prompt.
-     Cue holds about 3.5s, fades out over .5s; the prompt fades in over .5s, starting .3s before the cue is gone (a brief overlap). */
-  .swap { display: grid; }
-  .swap > * { grid-area: 1 / 1; }
-  .cue { align-self: center; padding: 10px 0 18px; cursor: pointer; }
-  .cue .big { font-family: var(--h); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.1; margin: 0; }
-  .cue .small { font-family: var(--b); font-size: 1.15rem; color: var(--muted); margin: 12px 0 0; font-style: italic; }
-  .swap.play .cue { animation: cueOut .5s ease-in 3.5s forwards; }
-  .swap.play .prompt { opacity: 0; animation: promptIn .5s ease-out 3.7s forwards; }
-  .swap.done .cue { opacity: 0; visibility: hidden; animation: none; }
-  .swap.done .prompt { opacity: 1; animation: none; }
-  @keyframes cueOut { to { opacity: 0; visibility: hidden; } }
-  @keyframes promptIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .swap.play .cue { animation-duration: .01s; } .swap.play .prompt { animation-duration: .01s; } }
+  /* Your move: three stages, each alone on the screen, each with its own chime and typeface.
+     1 "Get your work open first." (Playfair black, ~4s) -> 2 "Clear your work space" (EB Garamond italic, 16s, lines arrive one by one)
+     -> 3 the move (Fraunces). Each fades out over .6s while the next fades in, with a short overlap. Tap to go to the next stage. */
+  .swap { display: grid; min-height: min(62vh, 560px); }
+  .swap > * { grid-area: 1 / 1; align-self: center; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s, transform .6s ease; transform: translateY(8px); }
+  .swap > .on { opacity: 1; visibility: visible; transform: none; transition: opacity .7s ease .25s, visibility 0s, transform .7s ease .25s; }
+  .cue { cursor: pointer; padding: 10px 0 18px; }
+  .cue1 .big { font-family: var(--h); font-weight: 900; font-size: clamp(3rem, 11vw, 5.6rem); line-height: 1.02; letter-spacing: -.01em; margin: 0; }
+  .cue1 .small { font-family: var(--b); font-style: italic; font-size: clamp(1.2rem, 3.4vw, 1.6rem); color: var(--muted); margin: 22px 0 0; }
+  .cue2 p { font-family: var(--b); font-style: italic; font-weight: 400; font-size: clamp(2rem, 6.6vw, 3.5rem); line-height: 1.15; margin: 0 0 .45em; opacity: 0; transform: translateY(6px); transition: opacity 1.4s ease, transform 1.4s ease; }
+  .cue2 p.in { opacity: 1; transform: none; }
+  .cue .hint { font-family: var(--l); font-style: normal; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 2.2em; transition: opacity 1.2s ease; }
+  .cue2 { cursor: default; } .cue2 .hint { opacity: 0; } .cue2.ready { cursor: pointer; } .cue2.ready .hint { opacity: 1; }
+  .prompt .label { font-size: .9rem; letter-spacing: .2em; }
+  .move { font-family: 'Fraunces', var(--h); font-weight: 400; font-variation-settings: 'opsz' 96; font-size: clamp(2rem, 5.8vw, 3rem); line-height: 1.22; margin: 18px 0 26px; }
+  @media (prefers-reduced-motion: reduce) { .swap > *, .swap > .on, .cue2 p { transition: none; } }
   .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
   .else { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0; }
   .else button { text-align: left; background: var(--panel); border: 1px solid var(--stone); padding: 16px 18px; }
@@ -441,11 +442,18 @@
       <!-- move -->
       <div id="step-move">
         <div class="swap" id="move-swap">
-          <div class="cue" onclick="cueDone()" title="Tap to skip">
+          <div class="cue cue1" id="cue1" onclick="cueNext()" title="Tap to go on">
             <p class="big">Get your work open first.</p>
             <p class="small">The file, the sketchbook, the instrument.</p>
+            <div class="hint">Tap when you're ready</div>
           </div>
-          <div class="prompt">
+          <div class="cue cue2" id="cue2" onclick="cueNext()" title="Tap to go on">
+            <p>Close all the tabs that are open on your laptop.</p>
+            <p>Put away your to-do lists.</p>
+            <p>Take a moment to clear your work space.</p>
+            <div class="hint">Tap when you're ready</div>
+          </div>
+          <div class="prompt" id="cue3">
             <div class="label" style="margin-top:6px">Your move <span class="sample" style="margin-left:6px">Sample</span></div>
             <p class="move" id="move-text"></p>
           </div>
@@ -1065,7 +1073,7 @@ function setStep(step){
   state.step = step;
   ['breathe','move','else','flow','log'].forEach(s => { const el = $('step-'+s); el.style.display = s===step ? 'block' : 'none'; el.classList.remove('step-in'); if (s===step) { void el.offsetWidth; el.classList.add('step-in'); } });
   if (step === 'breathe') autoBreath(); else cancelCountdown();
-  if (step === 'move') playCue();
+  if (step === 'move') playCue(); else { (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
   applyView();
   if (step === 'else') offerElse();
   const names = {breathe:'Breathe', move:'Your move', flow:'Make', log:'Log it'};
@@ -1298,9 +1306,27 @@ async function keepAwake(on){
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('focus')) { state.wake = null; keepAwake(true); } });
 /* Your move: show the cue, then hand over to the prompt (CSS does the timing). */
-function playCue(){ const s = $('move-swap'); s.classList.remove('play','done'); void s.offsetWidth; s.classList.add('play');
-  clearTimeout(state.cueT); state.cueT = setTimeout(cueDone, 4300); }
-function cueDone(){ clearTimeout(state.cueT); const s = $('move-swap'); s.classList.remove('play'); s.classList.add('done'); }
+/* Your move, in three stages. Stage 1 for 4s (tap to go on sooner). Stage 2 holds at least 15s and can't be tapped past:
+   its three lines arrive at 0.6s, 4s and 7.5s, and at 15s "Tap when you're ready" appears and it waits for that tap. Then 3 stays.
+   A different Koshi chime marks each stage: Terra (ground), Aqua (clear), Ignis (begin). Plays once per session;
+   coming back from "Try something else" goes straight to the move. */
+const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_MIN = 15000;
+function cueShow(n){
+  state.cueStage = n; (state.cueTs || []).forEach(clearTimeout); state.cueTs = [];
+  [1,2,3].forEach(i => $('cue'+i).classList.toggle('on', i === n));
+  if (state.cueChime !== false) koshiChime(CUE_CHIMES[n-1]);
+  if (n === 2) { const c = $('cue2'), ps = c.querySelectorAll('p'); c.classList.remove('ready'); ps.forEach(p => p.classList.remove('in'));
+    [600, 4000, 7500].forEach((ms, i) => state.cueTs.push(setTimeout(() => ps[i] && ps[i].classList.add('in'), ms)));
+    state.cueTs.push(setTimeout(() => c.classList.add('ready'), CLEAR_MIN)); }
+  if (n === 1) state.cueTs.push(setTimeout(() => cueShow(2), CUE_HOLD));
+  track('move_stage', { stage: n });
+}
+function playCue(){
+  if (state.cueSid === state.sid) { state.cueChime = false; cueShow(3); state.cueChime = true; return; }
+  state.cueSid = state.sid; cueShow(1);
+}
+function cueNext(){ if (state.cueStage === 1) cueShow(2); else if (state.cueStage === 2 && $('cue2').classList.contains('ready')) cueShow(3); }
+function cueDone(){ if (state.cueStage !== 3) { state.cueChime = false; cueShow(3); state.cueChime = true; } }
 /* For days they arrive ready: no block, no breath, straight to the timer at their usual length. */
 function straightToMaking(){
   state.sid = 's' + Date.now().toString(36); track('straight_to_making',{line: state.readyIndex});
@@ -1444,9 +1470,10 @@ const KOSHI = {
   ignis: [196.0, 246.9, 293.7, 392.0, 493.9, 587.3, 784.0, 880.0]    /* G B D G B D G A */
 };
 const BREATH_CHIME = { box:'aria', vagal:'terra', lion:'ignis', bee:'aqua', four78:'aqua', belly:'terra', exhale:'aqua', pursed:'aria' };
-function koshi(breath){
+function koshi(breath){ koshiChime(BREATH_CHIME[breath] || 'terra'); }
+function koshiChime(name){
   try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)()); if (ctx.state === 'suspended') ctx.resume();
-    const rods = KOSHI[BREATH_CHIME[breath] || 'terra'];
+    const rods = KOSHI[name] || KOSHI.terra;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200; lp.Q.value = .3;
     const room = ctx.createGain(); room.gain.value = 1; lp.connect(room); room.connect(ctx.destination);
     [[.023,.2],[.041,.14],[.067,.09]].forEach(([d,g]) => { const dl = ctx.createDelay(); dl.delayTime.value = d; const gg = ctx.createGain(); gg.gain.value = g; lp.connect(dl).connect(gg).connect(ctx.destination); });
@@ -1468,7 +1495,7 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
 function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
   track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI(); setStep('log'); }
-function stopTimers(){ stopTimer(); stopBreath(); }
+function stopTimers(){ stopTimer(); stopBreath(); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
 
 /* log */
 function saveLog(felt){
