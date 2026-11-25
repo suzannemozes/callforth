@@ -1158,7 +1158,7 @@ function leaveSession(){
 }
 function resumeActive(){ return !!(state.resume && Date.now() - state.resume.at < RESUME_MINS * 60000); }
 function resumeSession(){ const r = state.resume; track('resume_started', { to: 'timer' }); state.resume = null; reenter(r); beginMaking(); }
-function resumeMove(){ const r = state.resume; track('resume_started', { to: 'move' }); state.resume = null; reenter(r); state.cueSid = state.sid; setStep('move'); }
+function resumeMove(){ const r = state.resume; track('resume_started', { to: 'move' }); state.resume = null; reenter(r); if (!state.wuT) state.wu = null; state.cueSid = state.sid; setStep('move'); }
 function reenter(r){ state.block = r.block; state.breath = r.breath; state.tried = r.tried || 'move'; state.sid = r.sid; state.blockAt = Date.now(); go('session'); }
 function renderBlocks(){
   if (!state.greeting) newVisit(true);
