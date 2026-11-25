@@ -143,6 +143,28 @@
   .stop-log-btn { font: inherit; font-family: var(--b); font-style: italic; font-size: .92rem; color: var(--muted); background: none; border: 0; padding: 10px 0; cursor: pointer; }
   .stop-log-btn:hover, .stop-log-btn:focus-visible { color: var(--charcoal); }
   .stop-log.done .stop-log-btn { cursor: default; color: var(--charcoal); }
+  /* Choose: straight to work or a five-minute warm-up */
+  .cue4 { cursor: default; }
+  .cue4 .choose-h { font-family: var(--h); font-weight: 700; font-size: clamp(2.2rem, 7.5vw, 3.6rem); line-height: 1.08; margin: 0; }
+  .cue4 .small { font-family: var(--b); font-style: italic; font-size: clamp(1.1rem, 3.2vw, 1.4rem); color: var(--muted); margin: 18px 0 0; }
+  /* The warm-up timer: deliberately livelier than the calm timer pictures. Warm ochre to clay, a thick ring,
+     a slowly turning dashed rim and a small pulse each second. */
+  .wu-wrap { text-align: center; margin: 0 0 18px; }
+  .wu { position: relative; width: min(210px, 56vw); aspect-ratio: 1; margin: 0 auto; display: grid; place-items: center; }
+  .wu svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .wu-rim { fill: none; stroke: #E3A04F; stroke-width: 3; stroke-dasharray: 3 9; stroke-linecap: round; transform-origin: 100px 100px; animation: wu-spin 14s linear infinite; opacity: .8; }
+  .wu-track { fill: none; stroke: #F1E2CC; stroke-width: 16; }
+  .wu-arc { fill: none; stroke: url(#wu-g); stroke-width: 16; stroke-linecap: round; stroke-dasharray: 490.1; stroke-dashoffset: 490.1; transition: stroke-dashoffset 1s linear; }
+  .wu-time { font-family: var(--l); font-weight: 500; font-size: clamp(2.6rem, 9vw, 3.4rem); letter-spacing: .04em; position: relative; color: #B5654A; }
+  .wu.beat { animation: wu-beat .5s ease-out; }
+  .wu.done .wu-rim { animation: none; } .wu.done .wu-time { font-size: 1.05rem; letter-spacing: .14em; text-transform: uppercase; }
+  #cue3 .move { font-size: clamp(1.45rem, 4.4vw, 2.1rem); margin-bottom: 90px; }
+  .wu-cap { font-family: var(--l); font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: #B5654A; margin: 12px 0 0; }
+  .wu-mini { font-family: var(--l); font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; color: #B5654A; margin: 4px 0 14px; }
+  @keyframes wu-spin { to { transform: rotate(360deg); } }
+  @keyframes wu-beat { 0% { transform: scale(1); } 30% { transform: scale(1.035); } 100% { transform: scale(1); } }
+  body.dark .wu-track { stroke: #3B3430; } body.dark .wu-time, body.dark .wu-cap, body.dark .wu-mini { color: #E0A07A; }
+  @media (prefers-reduced-motion: reduce) { .wu-rim, .wu.beat { animation: none; } }
   .breath-done { text-align: center; margin: -8px 0 20px; }
   .breath-done .note { margin-top: 10px; }
   .alt-breath { text-align: center; margin: -14px 0 24px; }
@@ -500,7 +522,7 @@
           <div class="cue cue1" id="cue1" onclick="cueNext()" title="Tap to go on">
             <p class="big">Get your work open first.</p>
             <p class="small">The file, the sketchbook, the instrument.</p>
-            <div class="hint">Tap when you're ready</div>
+            <div class="hint">Tap when your work is open</div>
           </div>
           <div class="cue cue2" id="cue2" onclick="cueNext()" title="Tap to go on">
             <p>Close all the tabs that are open on your laptop.</p>
@@ -508,14 +530,33 @@
             <p>Take a moment to clear your work space.</p>
             <div class="hint">Tap when you're ready</div>
           </div>
+          <div class="cue cue4" id="cue4">
+            <p class="choose-h">How would you like to begin?</p>
+            <p class="small">Go straight into your work, or take five minutes to warm up first.</p>
+          </div>
           <div class="prompt" id="cue3">
-            <div class="label" style="margin-top:6px">Your move <span class="sample" style="margin-left:6px">Sample</span></div>
+            <div class="wu-wrap">
+              <div class="wu" id="wu" aria-hidden="true">
+                <svg viewBox="0 0 200 200"><defs><linearGradient id="wu-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3A04F"/><stop offset=".55" stop-color="#D2794A"/><stop offset="1" stop-color="#B5654A"/></linearGradient></defs>
+                  <circle cx="100" cy="100" r="92" class="wu-rim"/>
+                  <circle cx="100" cy="100" r="78" class="wu-track"/>
+                  <circle cx="100" cy="100" r="78" class="wu-arc" id="wu-arc" transform="rotate(-90 100 100)"/>
+                </svg>
+                <div class="wu-time" id="wu-time">5:00</div>
+              </div>
+              <p class="wu-cap" id="wu-cap">Five-minute warm-up</p>
+            </div>
+            <div class="label" style="margin-top:6px">Your warm-up <span class="sample" style="margin-left:6px">Sample</span></div>
             <p class="move" id="move-text"></p>
           </div>
         </div>
-        <div class="actions thumb">
-          <button class="btn" onclick="beginMaking()">My work is open. Start.</button>
-          <button class="btn ghost" onclick="setStep('else')">Try something else</button>
+        <div class="actions thumb" id="move-actions-choose" style="display:none">
+          <button class="btn" onclick="chooseStraight()">Straight to a work block</button>
+          <button class="btn ghost" onclick="startWarmup()">I need a five-minute warm-up</button>
+        </div>
+        <div class="actions thumb" id="move-actions-warm" style="display:none">
+          <button class="btn" onclick="warmupToWork()">I'm ready to start working</button>
+          <button class="btn ghost" id="wu-else-btn" onclick="setStep('else')">Try something else</button>
         </div>
       </div>
 
@@ -525,6 +566,7 @@
         <div class="label" style="margin-top:6px">Something else</div>
         <h2 style="margin:8px 0 6px" id="else-h">Two ways in. Pick one.</h2>
         <div class="two-choice" id="else-choices"></div>
+        <p class="wu-mini" id="wu-mini" style="display:none"></p>
         <div id="else-detail"></div>
         <p class="note why-two">Why only two? When you're stuck, fewer choices make it easier to start.</p>
       </div>
@@ -1167,6 +1209,7 @@ function setStep(step){
   ['breathe','move','else','flow','log'].forEach(s => { const el = $('step-'+s); el.style.display = s===step ? 'block' : 'none'; el.classList.remove('step-in'); if (s===step) { void el.offsetWidth; el.classList.add('step-in'); } });
   if (step === 'breathe') { hideBreathDone(); autoBreath(); } else { cancelCountdown(); clearTimeout(state.doneT); }
   if (step === 'move') playCue(); else { (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
+  if (state.wu && step === 'else') renderWu();
   applyView();
   if (step === 'else') offerElse();
   const names = {breathe:'Breathe', move:'Your move', flow:'Make', log:'Log it'};
@@ -1425,21 +1468,71 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_LINES = [600, 5000, 9500], CLEAR_LAST = 10000;
 function cueShow(n){
   state.cueStage = n; (state.cueTs || []).forEach(clearTimeout); state.cueTs = [];
-  [1,2,3].forEach(i => $('cue'+i).classList.toggle('on', i === n));
+  [1,2,3,4].forEach(i => $('cue'+i).classList.toggle('on', i === n));
+  $('move-actions-choose').style.display = n === 4 ? '' : 'none';
+  $('move-actions-warm').style.display = n === 3 ? '' : 'none';
   // Terra marks the end of the breath ('Done'); stage 1 only plays it when the breath was skipped.
-  if (state.cueChime !== false && !(n === 1 && state.doneChimeSid === state.sid)) koshiChime(CUE_CHIMES[n-1]);
+  // Chimes: Terra (open your work, unless Done just rang it), Aqua (clear your space), Ignis (choose how to begin).
+  // The warm-up brings its own spark tones.
+  if (state.cueChime !== false && n !== 3 && !(n === 1 && state.doneChimeSid === state.sid)) koshiChime({1:'terra', 2:'aqua', 4:'ignis'}[n]);
   if (n === 2) { const c = $('cue2'), ps = c.querySelectorAll('p'); c.classList.remove('ready'); ps.forEach(p => p.classList.remove('in'));
     ps.forEach(p => p.classList.remove('past'));
     CLEAR_LINES.forEach((ms, i) => state.cueTs.push(setTimeout(() => { if (ps[i-1]) ps[i-1].classList.add('past'); if (ps[i]) ps[i].classList.add('in'); }, ms)));
     state.cueTs.push(setTimeout(() => { const last = ps[ps.length-1]; if (last) last.classList.add('past'); c.classList.add('ready'); }, CLEAR_LINES[CLEAR_LINES.length-1] + CLEAR_LAST)); }
-  if (n === 1) state.cueTs.push(setTimeout(() => cueShow(2), CUE_HOLD));
   track('move_stage', { stage: n });
 }
 function playCue(){
-  if (state.cueSid === state.sid) { state.cueChime = false; cueShow(3); state.cueChime = true; return; }
-  state.cueSid = state.sid; cueShow(1);
+  if (state.cueSid === state.sid) { state.cueChime = false; cueShow(state.wu ? 3 : 4); state.cueChime = true; return; }
+  state.cueSid = state.sid; state.wu = null; cueShow(1);
 }
-function cueNext(){ if (state.cueStage === 1) cueShow(2); else if (state.cueStage === 2 && $('cue2').classList.contains('ready')) cueShow(3); }
+/* Warm-up: optional and only one per session. Five minutes with its own livelier timer and tones.
+   "I'm ready to start working" goes to the work block at any point; when the five minutes end,
+   the work block starts by itself 30 seconds later. Try something else swaps the activity,
+   not the clock: the same five minutes keep running. */
+const WU_SECS = 300, WU_AFTER = 30;
+function chooseStraight(){ track('warmup_choice', { choice: 'straight' }); beginMaking(); }
+function startWarmup(){
+  if (state.wu) return; track('warmup_choice', { choice: 'warmup' });
+  state.wu = { left: WU_SECS, done: false, after: WU_AFTER, sid: state.sid };
+  cueShow(3); renderWu(); sparkTone('start');
+  state.wuT = setInterval(tickWu, 1000); track('warmup_started', {});
+}
+function tickWu(){
+  const w = state.wu; if (!w || w.sid !== state.sid) return stopWu();
+  if (!w.done) { w.left--; if (w.left <= 0) { w.left = 0; w.done = true; sparkTone('end'); track('warmup_finished', {}); } }
+  else { w.after--; if (w.after <= 0) { track('warmup_auto_start', {}); warmupToWork(); return; } }
+  renderWu();
+}
+function renderWu(){
+  const w = state.wu; if (!w) return; const m = Math.floor(w.left/60), s = w.left % 60;
+  const wu = $('wu'); wu.classList.toggle('done', w.done);
+  $('wu-arc').style.strokeDashoffset = (490.1 * (w.left / WU_SECS)).toFixed(1);
+  $('wu-time').textContent = w.done ? 'Warmed up' : `${m}:${String(s).padStart(2,'0')}`;
+  $('wu-cap').textContent = w.done ? `Your work block starts in ${w.after} seconds` : 'Five-minute warm-up';
+  if (!w.done) { wu.classList.remove('beat'); void wu.offsetWidth; wu.classList.add('beat'); }
+  const mini = $('wu-mini'); mini.style.display = state.step === 'else' ? 'block' : 'none';
+  mini.textContent = w.done ? `Warm-up done. Your work block starts in ${w.after} seconds.` : `Warm-up · ${m}:${String(s).padStart(2,'0')} left`;
+}
+function stopWu(){ clearInterval(state.wuT); state.wuT = null; }
+function warmupToWork(){ stopWu(); $('wu-mini').style.display = 'none'; beginMaking(); }
+/* The warm-up's own tones: brighter and quicker than the Koshi chimes and the bowl. Start: a rising
+   three-note spark. End: the same notes, higher, ringing a little longer. Built in the browser. */
+function sparkTone(kind){
+  if (state.soundOn === false) return;
+  try {
+    const ctx = window.__actx || (window.__actx = new (window.AudioContext || window.webkitAudioContext)());
+    const notes = kind === 'end' ? [659.3, 830.6, 987.8, 1318.5] : [523.3, 659.3, 784];
+    notes.forEach((f, i) => {
+      const t0 = ctx.currentTime + i * (kind === 'end' ? .14 : .11), dur = kind === 'end' ? 1.6 : .7;
+      [[1, .5], [3.01, .12], [5.2, .04]].forEach(([mult, amp]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f * mult;
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.05 * amp, t0 + .008); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+        o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + dur + .05);
+      });
+    });
+  } catch (e) {}
+}
+function cueNext(){ if (state.cueStage === 1) cueShow(2); else if (state.cueStage === 2 && $('cue2').classList.contains('ready')) cueShow(4); }
 function cueDone(){ if (state.cueStage !== 3) { state.cueChime = false; cueShow(3); state.cueChime = true; } }
 /* For days they arrive ready: no block, no breath, straight to the timer at their usual length. */
 function straightToMaking(){
@@ -1570,7 +1663,7 @@ function pickElse(kind){
     html = `<div class="card"><div class="label">${o.title} <span class="sample">Sample</span></div>
       ${o.audio ? `<div class="audio"><button class="play" onclick="openModal('Audio in Suz\\'s voice plays here. [To record.]')" aria-label="Play">▶</button><span class="track"></span><span class="label" style="color:var(--muted)">${o.mins}</span></div>` : ''}
       <p style="margin-top:10px${kind==='prompt'?';font-family:var(--h);font-size:1.25rem':''}">${body}</p>
-      <p class="note" style="font-style:normal;margin:10px 0 0">When you're done, get your work open.</p><div class="actions thumb" style="margin-top:8px"><button class="btn" onclick="beginMaking()">My work is open. Start.</button></div></div>`;
+      <p class="note" style="font-style:normal;margin:10px 0 0">When you're done, get your work open.</p><div class="actions thumb" style="margin-top:8px"><button class="btn" onclick="warmupToWork()">I'm ready to start working</button></div></div>`;
   }
   $('else-detail').innerHTML = html;
   $('else-detail').scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -1590,6 +1683,7 @@ function renderTimerPanel(){
 function toggleTimerPanel(){ const p = $('timer-panel'); const open = p.style.display === 'none'; p.style.display = open ? 'block' : 'none'; $('timer-pill').setAttribute('aria-expanded', open); renderTimerPanel(); }
 /* One tap from the move to making: the timer starts at their usual length and sound. */
 function beginMaking(){
+  stopWu();
   resetFlowUI(); state.lastMins = null;
   setStep('flow'); $('timer-panel').style.display = 'none'; renderTimerPanel();
   state.left = state.len*60; pickViz(); renderTimer(); startTimer();
@@ -1702,7 +1796,7 @@ function stopAskingLog(){
   $('stop-log').querySelector('button').textContent = 'Done. Your sessions will save on their own. You can turn this back on in Settings.';
   setTimeout(() => { if (state.step === 'log') saveLog(null, true); }, 2600);
 }
-function stopTimers(){ stopTimer(); stopBreath(); clearTimeout(state.doneT); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
+function stopTimers(){ stopWu(); stopTimer(); stopBreath(); clearTimeout(state.doneT); (state.cueTs || []).forEach(clearTimeout); state.cueTs = []; }
 
 /* log */
 function saveLog(felt, auto){

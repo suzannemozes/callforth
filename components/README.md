@@ -41,3 +41,16 @@ const kind = pickTimerPicture(lastKind);   // when the timer starts; save it as 
 ```
 
 Show "9 min left" beneath it (hidden when numbers are off; "Still going" after Keep going). It has no sound and needs no other files.
+
+## WarmupTimer.tsx
+
+The optional five-minute warm-up on the Your move step: a lively ochre-to-clay ring with a turning dashed rim, a pulse each second, and its own start and end tones. Copy it exactly as it is.
+
+```tsx
+import WarmupTimer from './components/WarmupTimer';
+<WarmupTimer sound={soundOn} dark={darkRoom} startedAt={warmupStartedAt}
+  onDone={() => track('warmup_finished')}
+  onAutoStart={() => { track('warmup_auto_start'); beginMaking(); }} />
+```
+
+Save `warmupStartedAt = Date.now()` when they tap "I need a five-minute warm-up" and pass it to every copy (Your move and Something else), so it's one clock. Omit `startedAt` only on the very first mount if you want the start tone to play from the component. Unmount it when they tap "I'm ready to start working".
