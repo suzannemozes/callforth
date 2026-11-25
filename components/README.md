@@ -44,7 +44,7 @@ Show "9 min left" beneath it (hidden when numbers are off; "Still going" after K
 
 ## WarmupTimer.tsx
 
-The optional five-minute warm-up on the Your move step: a lively ochre-to-clay ring with a turning dashed rim, a pulse each second, and its own start and end tones. Copy it exactly as it is.
+The optional five-minute warm-up on the Your move step: a lively ochre-to-clay ring with a turning dashed rim, a pulse each second, and its own start and end tones (the timer's singing bowl, a fifth higher). Copy it exactly as it is.
 
 ```tsx
 import WarmupTimer from './components/WarmupTimer';

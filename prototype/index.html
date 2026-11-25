@@ -1461,11 +1461,11 @@ async function keepAwake(on){
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('focus')) { state.wake = null; keepAwake(true); } });
 /* Your move: show the cue, then hand over to the prompt (CSS does the timing). */
 /* Your move, in three stages. Stage 1 for 4s (tap to go on sooner). Stage 2 can't be tapped past: its three lines arrive
-   in verdigris at 0.6s, 5s and 9.5s, each earlier line softening to light gray as the next arrives; the last softens 10s
+   in verdigris at 0.6s, 5s and 9.5s, each earlier line softening to light gray as the next arrives; the last softens 6s
    after it arrives (19.5s), and then "Tap when you're ready" appears and it waits for that tap. Then 3 stays.
    A different Koshi chime marks each stage: Terra (ground), Aqua (clear), Ignis (begin). Plays once per session;
    coming back from "Try something else" goes straight to the move. */
-const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_LINES = [600, 5000, 9500], CLEAR_LAST = 10000;
+const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_LINES = [600, 5000, 9500], CLEAR_LAST = 6000;
 function cueShow(n){
   state.cueStage = n; (state.cueTs || []).forEach(clearTimeout); state.cueTs = [];
   [1,2,3,4].forEach(i => $('cue'+i).classList.toggle('on', i === n));
@@ -1515,23 +1515,10 @@ function renderWu(){
 }
 function stopWu(){ clearInterval(state.wuT); state.wuT = null; }
 function warmupToWork(){ stopWu(); $('wu-mini').style.display = 'none'; beginMaking(); }
-/* The warm-up's own tones: brighter and quicker than the Koshi chimes and the bowl. Start: a rising
-   three-note spark. End: the same notes, higher, ringing a little longer. Built in the browser. */
-function sparkTone(kind){
-  if (state.soundOn === false) return;
-  try {
-    const ctx = window.__actx || (window.__actx = new (window.AudioContext || window.webkitAudioContext)());
-    const notes = kind === 'end' ? [659.3, 830.6, 987.8, 1318.5] : [523.3, 659.3, 784];
-    notes.forEach((f, i) => {
-      const t0 = ctx.currentTime + i * (kind === 'end' ? .14 : .11), dur = kind === 'end' ? 1.6 : .7;
-      [[1, .5], [3.01, .12], [5.2, .04]].forEach(([mult, amp]) => {
-        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f * mult;
-        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.05 * amp, t0 + .008); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
-        o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + dur + .05);
-      });
-    });
-  } catch (e) {}
-}
+/* The warm-up's tones belong to the same family as the timer's singing bowl: the same bowl, a fifth higher
+   (a smaller bowl, 330 Hz), so it's recognisably related but marks the warm-up. Start: one strike. End: two strikes,
+   1.2 seconds apart. Follows the Play sounds switch. */
+function sparkTone(kind){ bell(kind === 'end' ? 'warm-end' : false, 1.5); }
 function cueNext(){ if (state.cueStage === 1) cueShow(2); else if (state.cueStage === 2 && $('cue2').classList.contains('ready')) cueShow(4); }
 function cueDone(){ if (state.cueStage !== 3) { state.cueChime = false; cueShow(3); state.cueChime = true; } }
 /* For days they arrive ready: no block, no breath, straight to the timer at their usual length. */
@@ -1705,16 +1692,18 @@ function keepGoing(){ track('keep_going',{}); document.body.classList.remove('ti
 function resetFlowUI(){ document.body.classList.remove('timeup'); state.over = false; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex'; $('over-note').style.display = 'none';
 }
 /* 3. One soft bell marks the threshold (and a gentler one at the end). Web Audio, no sound files. */
-function bell(soft){
+function bell(soft, pitch){
+  pitch = pitch || 1;
   if (state.soundOn === false) return;
   /* A warm singing-bowl tone: low fundamental, two gently beating partials, slow bloom, long fade, softened highs. */
   try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)());
     if (ctx.state === 'suspended') ctx.resume();
     const strike = (when, vol) => { const t0 = ctx.currentTime + when, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.Q.value = .3; lp.connect(ctx.destination);
-      [[220,1],[220.7,.6],[556,.22],[557.1,.15],[1017,.05]].forEach(([f,g]) => { const o = ctx.createOscillator(), v = ctx.createGain(); o.type = 'sine'; o.frequency.value = f;
+      [[220,1],[220.7,.6],[556,.22],[557.1,.15],[1017,.05]].forEach(([f,g]) => { const o = ctx.createOscillator(), v = ctx.createGain(); o.type = 'sine'; o.frequency.value = f * pitch;
         v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(vol*g, t0 + .18); v.gain.exponentialRampToValueAtTime(.0001, t0 + 5.5);
         o.connect(v).connect(lp); o.start(t0); o.stop(t0 + 5.7); }); };
-    if (soft) { strike(0, .035); strike(1.6, .025); } else strike(0, .045);
+    if (soft === 'warm-end') { strike(0, .04); strike(1.2, .03); }
+    else if (soft) { strike(0, .035); strike(1.6, .025); } else strike(0, .045);
   } catch(e) {}
 }
 /* Each breath opens with its own Koshi chime, an octave below the real chime, played as the 3-2-1 countdown begins.

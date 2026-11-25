@@ -1,7 +1,7 @@
 /**
  * WarmupTimer: the five-minute warm-up on the Your move step. Livelier than the calm timer pictures:
  * a thick ochre-to-clay ring that empties over five minutes, a slowly turning dashed rim, a small pulse
- * each second, and its own start and end tones (a rising spark, built in the browser, no sound files).
+ * each second, and its own start and end tones (the timer's singing bowl, a fifth higher; no sound files).
  *
  * Usage (mount it when the person taps "I need a five-minute warm-up"; it starts at once):
  *   <WarmupTimer sound={soundOn} dark={darkRoom} onDone={() => track('warmup_finished')}
@@ -17,23 +17,26 @@ export const WARMUP_HANDOVER_SECONDS = 30;
 const CIRC = 2 * Math.PI * 78; // 490.1
 
 let ctx: AudioContext | null = null;
+/** The warm-up's tones: the same singing bowl as the work timer, a fifth higher (330 Hz), so they belong to the
+ *  same family but mark the warm-up. Start: one strike. End: two strikes, 1.2 seconds apart. No sound files. */
 export function sparkTone(kind: 'start' | 'end'): void {
   try {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     ctx = ctx ?? new AC();
-    const notes = kind === 'end' ? [659.3, 830.6, 987.8, 1318.5] : [523.3, 659.3, 784];
-    notes.forEach((f, i) => {
-      const t0 = ctx!.currentTime + i * (kind === 'end' ? 0.14 : 0.11);
-      const dur = kind === 'end' ? 1.6 : 0.7;
-      ([[1, 0.5], [3.01, 0.12], [5.2, 0.04]] as const).forEach(([mult, amp]) => {
-        const o = ctx!.createOscillator(), g = ctx!.createGain();
-        o.type = 'sine'; o.frequency.value = f * mult;
-        g.gain.setValueAtTime(0, t0);
-        g.gain.linearRampToValueAtTime(0.05 * amp, t0 + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-        o.connect(g); g.connect(ctx!.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+    if (ctx.state === 'suspended') void ctx.resume();
+    const c = ctx;
+    const strike = (when: number, vol: number) => {
+      const t0 = c.currentTime + when, lp = c.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 1400; lp.Q.value = 0.3; lp.connect(c.destination);
+      ([[220, 1], [220.7, 0.6], [556, 0.22], [557.1, 0.15], [1017, 0.05]] as const).forEach(([f, g]) => {
+        const o = c.createOscillator(), v = c.createGain();
+        o.type = 'sine'; o.frequency.value = f * 1.5;
+        v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(vol * g, t0 + 0.18);
+        v.gain.exponentialRampToValueAtTime(0.0001, t0 + 5.5);
+        o.connect(v).connect(lp); o.start(t0); o.stop(t0 + 5.7);
       });
-    });
+    };
+    if (kind === 'end') { strike(0, 0.04); strike(1.2, 0.03); } else strike(0, 0.045);
   } catch { /* sound is optional */ }
 }
 
