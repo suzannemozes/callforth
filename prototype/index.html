@@ -1714,10 +1714,10 @@ function renderTimer(){
     $('tbar-cap').style.visibility = (state.showNumbers || state.over) ? 'visible' : 'hidden'; }
 }
 /* 1. The timer ends gently: a soft tone, then a choice. Keep going switches to a quiet count-up. */
-function timeUp(){ doneTone(); document.body.classList.add('timeup'); $('time-up').style.display = 'block'; $('timer-actions').style.display = 'none'; track('time_up',{minutes:state.len}); }
-function keepGoing(){ track('keep_going',{}); document.body.classList.remove('timeup'); state.over = true; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex';
+function timeUp(){ doneTone(); state.doneRang = true; document.body.classList.add('timeup'); $('time-up').style.display = 'block'; $('timer-actions').style.display = 'none'; track('time_up',{minutes:state.len}); }
+function keepGoing(){ track('keep_going',{}); state.doneRang = false; document.body.classList.remove('timeup'); state.over = true; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex';
   $('over-note').style.display = currentView() === 'bar' ? 'none' : 'block'; startTimer(); }
-function resetFlowUI(){ document.body.classList.remove('timeup'); state.over = false; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex'; $('over-note').style.display = 'none';
+function resetFlowUI(){ state.doneRang = false; document.body.classList.remove('timeup'); state.over = false; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex'; $('over-note').style.display = 'none';
 }
 /* 3. One soft bell marks the threshold (and a gentler one at the end). Web Audio, no sound files. */
 function bell(soft, pitch){
@@ -1811,7 +1811,8 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
   if (state.left === state.len*60) track('timer_started',{minutes:state.len, sound:state.sound, secs_to_start: state.blockAt ? Math.round((Date.now()-state.blockAt)/1000) : null}); state.running = true; $('timer-btn').textContent = 'Pause';
   state.tid = setInterval(()=>{ if (state.over) { state.extra++; renderTimer(); return; } state.left--; renderTimer(); if (state.left <= 0) { stopTimer(); timeUp(); } }, 1000); }
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
-function finishFlow(){ doneTone(); const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
+/* I'm done plays the done tone, unless the time-up tone already rang for this timer (and they didn't keep going). */
+function finishFlow(){ if (!state.doneRang) doneTone(); const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
   track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI();
   (state.roundTimes = state.roundTimes || []).push(Date.now());
   if (state.member && state.askLog === false) { autoSaveLog(); return; }

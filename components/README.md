@@ -57,4 +57,4 @@ Save `warmupStartedAt = Date.now()` when they tap "I need a five-minute warm-up"
 
 ## doneTone.ts
 
-The done tone: one low, warm, rewarding note (G3, 196 Hz, quick landing, major-chord overtones, about 3 seconds). Call `playDoneTone(soundOn)` when the Make timer reaches zero and when the person taps "I'm done". It replaces the old two soft bowl strikes at time up. Web Audio, no sound files; silent when Play sounds is off.
+The done tone: one low, warm, rewarding note (G3, 196 Hz, quick landing, major-chord overtones, about 3 seconds). Call `playDoneTone(soundOn)` when the Make timer reaches zero and when the person taps "I'm done" (but not if the time-up tone has just played and they didn't choose Keep going). It replaces the old two soft bowl strikes at time up. Web Audio, no sound files; silent when Play sounds is off.
