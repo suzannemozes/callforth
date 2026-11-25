@@ -54,3 +54,7 @@ import WarmupTimer from './components/WarmupTimer';
 ```
 
 Save `warmupStartedAt = Date.now()` when they tap "I need a five-minute warm-up" and pass it to every copy (Your move and Something else), so it's one clock. Omit `startedAt` only on the very first mount if you want the start tone to play from the component. Unmount it when they tap "I'm ready to start working".
+
+## doneTone.ts
+
+The done tone: one low, warm, rewarding note (G3, 196 Hz, quick landing, major-chord overtones, about 3 seconds). Call `playDoneTone(soundOn)` when the Make timer reaches zero and when the person taps "I'm done". It replaces the old two soft bowl strikes at time up. Web Audio, no sound files; silent when Play sounds is off.

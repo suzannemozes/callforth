@@ -201,7 +201,7 @@
   .cue2 p.past { color: #B4AEA5; }
   body.dark .cue2 p { color: #6CC0B3; } body.dark .cue2 p.past { color: #6B655D; }
   .cue .hint { font-family: var(--l); font-style: normal; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 2.2em; transition: opacity 1.2s ease; }
-  .cue2 { cursor: default; } .cue2 .hint { opacity: 0; } .cue2.ready { cursor: pointer; } .cue2.ready .hint { opacity: 1; }
+  .cue2 { cursor: pointer; } .cue2 .hint { opacity: 0; } .cue2.ready { cursor: pointer; } .cue2.ready .hint { opacity: 1; }
   .prompt .label { font-size: .9rem; letter-spacing: .2em; }
   .move { font-family: 'Fraunces', var(--h); font-weight: 400; font-variation-settings: 'opsz' 96; font-size: clamp(2rem, 5.8vw, 3rem); line-height: 1.22; margin: 18px 0 26px; }
   @media (prefers-reduced-motion: reduce) { .swap > *, .swap > .on, .cue2 p { transition: none; } }
@@ -546,7 +546,8 @@
               </div>
               <p class="wu-cap" id="wu-cap">Five-minute warm-up</p>
             </div>
-            <div class="label" style="margin-top:6px">Your warm-up <span class="sample" style="margin-left:6px">Sample</span></div>
+            <div class="label" style="margin-top:6px" id="wu-label">Your warm-up <span class="sample" style="margin-left:6px">Sample</span></div>
+            <div id="wu-audio"></div>
             <p class="move" id="move-text"></p>
           </div>
         </div>
@@ -1465,7 +1466,17 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
    after it arrives (19.5s), and then "Tap when you're ready" appears and it waits for that tap. Then 3 stays.
    A different Koshi chime marks each stage: Terra (ground), Aqua (clear), Ignis (begin). Plays once per session;
    coming back from "Try something else" goes straight to the move. */
-const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_LINES = [600, 5000, 9500], CLEAR_LAST = 6000;
+/* Clearing stage: the first line arrives at 0.6s, each next line about 4.4s after the one before. A tap brings the next
+   line in straight away (and the following one keeps the same spacing from there). "Tap when you're ready" appears
+   6 seconds after the first line; once all three lines are showing, a tap goes on to the choice. */
+const CUE_CHIMES = ['terra','aqua','ignis'], CUE_HOLD = 4000, CLEAR_FIRST = 600, CLEAR_GAPS = [4400, 4500], CLEAR_READY = 6000, CLEAR_LAST = 6000;
+function clearLine(i){
+  const c = $('cue2'), ps = c.querySelectorAll('p'); if (i < state.clearIdx || i >= ps.length) return;
+  clearTimeout(state.clearNextT);
+  if (ps[i-1]) ps[i-1].classList.add('past'); ps[i].classList.add('in'); state.clearIdx = i + 1;
+  if (i + 1 < ps.length) { state.clearNextT = setTimeout(() => clearLine(i + 1), CLEAR_GAPS[i] || 4400); state.cueTs.push(state.clearNextT); }
+  else state.cueTs.push(setTimeout(() => ps[i].classList.add('past'), CLEAR_LAST));
+}
 function cueShow(n){
   state.cueStage = n; (state.cueTs || []).forEach(clearTimeout); state.cueTs = [];
   [1,2,3,4].forEach(i => $('cue'+i).classList.toggle('on', i === n));
@@ -1475,10 +1486,9 @@ function cueShow(n){
   // Chimes: Terra (open your work, unless Done just rang it), Aqua (clear your space), Ignis (choose how to begin).
   // The warm-up brings its own spark tones.
   if (state.cueChime !== false && n !== 3 && !(n === 1 && state.doneChimeSid === state.sid)) koshiChime({1:'terra', 2:'aqua', 4:'ignis'}[n]);
-  if (n === 2) { const c = $('cue2'), ps = c.querySelectorAll('p'); c.classList.remove('ready'); ps.forEach(p => p.classList.remove('in'));
-    ps.forEach(p => p.classList.remove('past'));
-    CLEAR_LINES.forEach((ms, i) => state.cueTs.push(setTimeout(() => { if (ps[i-1]) ps[i-1].classList.add('past'); if (ps[i]) ps[i].classList.add('in'); }, ms)));
-    state.cueTs.push(setTimeout(() => { const last = ps[ps.length-1]; if (last) last.classList.add('past'); c.classList.add('ready'); }, CLEAR_LINES[CLEAR_LINES.length-1] + CLEAR_LAST)); }
+  if (n === 2) { const c = $('cue2'), ps = c.querySelectorAll('p'); c.classList.remove('ready'); ps.forEach(p => p.classList.remove('in', 'past'));
+    state.clearIdx = 0; state.clearNextT = setTimeout(() => clearLine(0), CLEAR_FIRST); state.cueTs.push(state.clearNextT);
+    state.cueTs.push(setTimeout(() => c.classList.add('ready'), CLEAR_FIRST + CLEAR_READY)); }
   track('move_stage', { stage: n });
 }
 function playCue(){
@@ -1493,8 +1503,8 @@ const WU_SECS = 300, WU_AFTER = 30;
 function chooseStraight(){ track('warmup_choice', { choice: 'straight' }); beginMaking(); }
 function startWarmup(){
   if (state.wu) return; track('warmup_choice', { choice: 'warmup' });
-  state.wu = { left: WU_SECS, done: false, after: WU_AFTER, sid: state.sid };
-  cueShow(3); renderWu(); sparkTone('start');
+  state.wu = { left: WU_SECS, done: false, after: WU_AFTER, sid: state.sid, alt: null };
+  renderWuPrompt(); cueShow(3); renderWu(); sparkTone('start');
   state.wuT = setInterval(tickWu, 1000); track('warmup_started', {});
 }
 function tickWu(){
@@ -1513,13 +1523,28 @@ function renderWu(){
   const mini = $('wu-mini'); mini.style.display = state.step === 'else' ? 'block' : 'none';
   mini.textContent = w.done ? `Warm-up done. Your work block starts in ${w.after} seconds.` : `Warm-up · ${m}:${String(s).padStart(2,'0')} left`;
 }
+/* The warm-up screen shows the block's warm-up, or, after Try something else, the activity they picked there,
+   under the same running clock. One swap per warm-up, so the Try something else button then goes away. */
+function renderWuPrompt(){
+  const w = state.wu, b = blockById(state.block), o = w && w.alt ? OPTIONS[w.alt] : null;
+  $('wu-label').innerHTML = (o ? o.title : 'Your warm-up') + ' <span class="sample" style="margin-left:6px">Sample</span>';
+  $('wu-audio').innerHTML = o && o.audio ? `<div class="audio" style="margin:10px 0 0"><button class="play" onclick="openModal('Audio in Suz\\'s voice plays here. [To record.]')" aria-label="Play">▶</button><span class="track"></span><span class="label" style="color:var(--muted)">${o.mins}</span></div>` : '';
+  $('move-text').textContent = !o ? b.move : w.alt === 'prompt' ? b.alt : o.body.replace('{PRACTICE}', practiceLine() + ' You know how to do this.');
+  $('wu-else-btn').style.display = o ? 'none' : '';
+}
 function stopWu(){ clearInterval(state.wuT); state.wuT = null; }
 function warmupToWork(){ stopWu(); $('wu-mini').style.display = 'none'; beginMaking(); }
 /* The warm-up's tones belong to the same family as the timer's singing bowl: the same bowl, a fifth higher
    (a smaller bowl, 330 Hz), so it's recognisably related but marks the warm-up. Start: one strike. End: two strikes,
    1.2 seconds apart. Follows the Play sounds switch. */
 function sparkTone(kind){ bell(kind === 'end' ? 'warm-end' : false, 1.5); }
-function cueNext(){ if (state.cueStage === 1) cueShow(2); else if (state.cueStage === 2 && $('cue2').classList.contains('ready')) cueShow(4); }
+function cueNext(){
+  if (state.cueStage === 1) return cueShow(2);
+  if (state.cueStage !== 2) return;
+  const n = $('cue2').querySelectorAll('p').length;
+  if (state.clearIdx < n) { track('clear_tap', { line: state.clearIdx + 1 }); return clearLine(state.clearIdx); }
+  if ($('cue2').classList.contains('ready')) cueShow(4);
+}
 function cueDone(){ if (state.cueStage !== 3) { state.cueChime = false; cueShow(3); state.cueChime = true; } }
 /* For days they arrive ready: no block, no breath, straight to the timer at their usual length. */
 function straightToMaking(){
@@ -1640,6 +1665,9 @@ function pickElse(kind){
   const o = OPTIONS[kind], b = blockById(state.block), locked = o.studio && !state.member;
   track('something_else',{option:kind, locked});
   document.querySelectorAll('#else-choices .choice').forEach(c => c.classList.toggle('on', c.getAttribute('onclick').includes(`'${kind}'`)));
+  if (!locked && state.wu && state.wuT) {   // from the warm-up: back to the warm-up screen, same clock, new activity
+    state.tried = kind; state.wu.alt = kind; renderWuPrompt(); setStep('move'); return;
+  }
   if (!locked) { $('else-choices').classList.add('chosen'); $('else-h').textContent = 'Your way in.'; $('else-back').style.display = 'none'; }
   let html;
   if (locked) {
@@ -1686,7 +1714,7 @@ function renderTimer(){
     $('tbar-cap').style.visibility = (state.showNumbers || state.over) ? 'visible' : 'hidden'; }
 }
 /* 1. The timer ends gently: a soft tone, then a choice. Keep going switches to a quiet count-up. */
-function timeUp(){ bell(true); document.body.classList.add('timeup'); $('time-up').style.display = 'block'; $('timer-actions').style.display = 'none'; track('time_up',{minutes:state.len}); }
+function timeUp(){ doneTone(); document.body.classList.add('timeup'); $('time-up').style.display = 'block'; $('timer-actions').style.display = 'none'; track('time_up',{minutes:state.len}); }
 function keepGoing(){ track('keep_going',{}); document.body.classList.remove('timeup'); state.over = true; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex';
   $('over-note').style.display = currentView() === 'bar' ? 'none' : 'block'; startTimer(); }
 function resetFlowUI(){ document.body.classList.remove('timeup'); state.over = false; state.extra = 0; $('time-up').style.display = 'none'; $('timer-actions').style.display = 'flex'; $('over-note').style.display = 'none';
@@ -1704,6 +1732,19 @@ function bell(soft, pitch){
         o.connect(v).connect(lp); o.start(t0); o.stop(t0 + 5.7); }); };
     if (soft === 'warm-end') { strike(0, .04); strike(1.2, .03); }
     else if (soft) { strike(0, .035); strike(1.6, .025); } else strike(0, .045);
+  } catch(e) {}
+}
+/* The done tone: one low, warm, rewarding note when time is up and when they tap I'm done. Same bowl family, lower
+   (G3, 196 Hz), but with a quicker landing (25 ms), a small lift into pitch and bright major-chord overtones
+   (octave, major third, fifth), so it reads as "yes, that's it" rather than "begin". About 3 seconds long. */
+function doneTone(){
+  if (state.soundOn === false) return;
+  try { const ctx = state.actx || (state.actx = new (window.AudioContext||window.webkitAudioContext)()); if (ctx.state === 'suspended') ctx.resume();
+    const t0 = ctx.currentTime + .02, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200; lp.Q.value = .3; lp.connect(ctx.destination);
+    [[196,1,3.2],[196.6,.45,3.2],[392,.3,2.4],[490,.2,2],[588,.12,1.6],[784,.05,1.2]].forEach(([f,g,d]) => { const o = ctx.createOscillator(), v = ctx.createGain(); o.type = 'sine';
+      o.frequency.setValueAtTime(f * .985, t0); o.frequency.exponentialRampToValueAtTime(f, t0 + .12);
+      v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(.065 * g, t0 + .025); v.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+      o.connect(v).connect(lp); o.start(t0); o.stop(t0 + d + .1); });
   } catch(e) {}
 }
 /* Each breath opens with its own Koshi chime, an octave below the real chime, played as the 3-2-1 countdown begins.
@@ -1770,7 +1811,7 @@ function startTimer(){ if (state.left === state.len*60 && !state.over) { bell();
   if (state.left === state.len*60) track('timer_started',{minutes:state.len, sound:state.sound, secs_to_start: state.blockAt ? Math.round((Date.now()-state.blockAt)/1000) : null}); state.running = true; $('timer-btn').textContent = 'Pause';
   state.tid = setInterval(()=>{ if (state.over) { state.extra++; renderTimer(); return; } state.left--; renderTimer(); if (state.left <= 0) { stopTimer(); timeUp(); } }, 1000); }
 function stopTimer(){ state.running = false; clearInterval(state.tid); if ($('timer-btn').textContent==='Pause') $('timer-btn').textContent = 'Resume'; }
-function finishFlow(){ const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
+function finishFlow(){ doneTone(); const secs = state.over ? state.len*60 + state.extra : state.len*60 - state.left; state.lastMins = Math.max(1, Math.round(secs/60));
   track('timer_finished',{planned:state.len, actual:state.lastMins, kept_going: !!state.over}); resetFlowUI();
   (state.roundTimes = state.roundTimes || []).push(Date.now());
   if (state.member && state.askLog === false) { autoSaveLog(); return; }
