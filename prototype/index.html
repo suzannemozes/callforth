@@ -249,6 +249,22 @@
   .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 20px; }
   .chip { border: 1px solid var(--stone); background: var(--panel); padding: 7px 14px; font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .66rem; border-radius: 999px; }
   .chip.on { border-color: var(--charcoal); background: var(--charcoal); color: var(--wall); }
+  .pick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; margin: 8px 0 0; }
+  .pick .chip { font-size: .7rem; padding: 10px 14px; min-height: 40px; }
+  .optin { display: flex; gap: 12px; align-items: flex-start; margin: 22px 0 18px; cursor: pointer; }
+  .optin input { appearance: none; -webkit-appearance: none; flex: none; width: 20px; height: 20px; margin: 2px 0 0; border: 1.5px solid var(--charcoal); background: var(--panel); border-radius: 0; display: grid; place-items: center; }
+  .optin input:checked { background: var(--charcoal); }
+  .optin input:checked::after { content: ''; width: 9px; height: 5px; border: 2px solid var(--wall); border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+  .optin input:focus-visible { outline: 2px solid var(--charcoal); outline-offset: 2px; }
+  .optin span { font-size: 1rem; line-height: 1.45; }
+  .optin small { display: block; color: var(--muted); font-size: .88rem; font-style: italic; margin-top: 2px; }
+  .shape { margin-top: 34px; background: var(--panel); border: 1px solid var(--stone); padding: 24px 22px 22px; text-align: left; }
+  .shape h3 { font-family: var(--h); font-size: 1.5rem; margin: 6px 0 4px; }
+  .shape .q { font-family: var(--l); text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; color: var(--bronze); margin: 22px 0 2px; }
+  .shape textarea { width: 100%; min-height: 76px; margin-top: 8px; padding: 12px; border: 1px solid var(--stone); background: var(--wall); font: inherit; border-radius: 0; resize: vertical; }
+  .shape .thanks { font-family: var(--h); font-style: italic; font-size: 1.35rem; margin: 6px 0 0; }
+  body.dark .optin input { background: #2E2C29; border-color: #C9A57E; } body.dark .optin input:checked { background: #C9A57E; }
+  body.dark .shape textarea { background: #2E2C29; border-color: #6B655D; color: #F4F0E9; }
   textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--stone); font: inherit; background: var(--panel); resize: vertical; }
   .bridge { background: var(--charcoal); color: var(--wall); padding: 26px 28px; margin-top: 30px; }
   .bridge .label { color: #C9A57E; }
@@ -413,7 +429,7 @@
     <div class="narrow">
       <div class="label">Before we begin</div>
       <h1 style="margin-top:8px">Tell me about your practice.</h1>
-      <p style="margin-top:12px">Three quick questions, so Call Forth can speak to the work you actually make.</p>
+      <p style="margin-top:12px">Four quick questions, so Call Forth can speak to the work you actually make.</p>
       <div class="field">
         <label class="label" for="r-name">What should I call you?</label>
         <input id="r-name" type="text" value="Maya" autocomplete="given-name">
@@ -435,6 +451,12 @@
         <input id="r-years" type="text" value="12 years" placeholder="e.g. 12 years, six months, since college">
         <p class="note" style="margin-top:6px">However you'd put it. Call Forth will remember, and remind you on the hard days.</p>
       </div>
+      <div class="field">
+        <span class="label" style="display:block;margin-bottom:4px">Where are you with your work right now?</span>
+        <p class="note" style="margin:0 0 4px">Pick the closest. You can change it any time in Settings.</p>
+        <div class="pick" id="r-stage" role="radiogroup" aria-label="Where are you with your work right now?"></div>
+      </div>
+      <label class="optin"><input type="checkbox" id="r-optin"><span>Send me occasional notes on creative practice.<small>Unsubscribe at any time.</small></span></label>
       <p class="note" style="margin:0 0 14px">Call Forth records which steps you use, never what you write, so it can get better at helping you. [Link to privacy note.]</p>
       <button class="btn" onclick="register()">Continue</button>
     </div>
@@ -470,6 +492,7 @@
     </div>
     <div class="blocks" id="blocks"></div>
     <p style="margin-top:20px" id="ready-wrap"><button class="quiet ready" onclick="straightToMaking()"><span id="ready-line">I feel pretty good today.</span> <span style="white-space:nowrap;display:inline-flex;align-items:center;gap:8px">Straight to making <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></p>
+    <div class="shape" id="shape" style="display:none"></div>
   </section>
 
   <!-- SESSION -->
@@ -719,6 +742,15 @@
         <div><h3>Studio hours</h3><p class="note" style="font-style:normal;margin:4px 0 0" id="hours-line"></p></div>
         <button class="gear" id="hours-btn" style="flex:none" onclick="state.member ? go('hours') : go('studio')">Set</button>
       </div>
+      <div class="label" style="margin-top:34px">Your work</div>
+      <div class="setting" style="display:block">
+        <h3>Where you are with your work</h3>
+        <div class="pick" id="set-stage" role="radiogroup" aria-label="Where you are with your work"></div>
+      </div>
+      <div class="setting">
+        <div><h3>Notes on creative practice</h3><p class="note" style="font-style:normal;margin:4px 0 0">Occasional emails. Sign-in links and studio-hour reminders come either way.</p></div>
+        <button class="switch" role="switch" id="sw-optin" onclick="setPref('emailOptIn', !state.emailOptIn)"><span></span></button>
+      </div>
       <div class="label" style="margin-top:34px">What you see</div>
       <p style="margin-top:8px">Numbers motivate some people and weigh on others. Choose what helps you. Everything is still saved either way, so you can switch back any time.</p>
       <div class="setting">
@@ -735,7 +767,7 @@
       </div>
       <div class="label" style="margin-top:34px">What you hear</div>
       <div class="setting">
-        <div><h3>Play sounds</h3><p class="note" style="font-style:normal;margin:4px 0 0">The chimes during the breath and your move, the bowl at the start and end of the timer, and studio background sounds. Turn off for a silent session.</p></div>
+        <div><h3>Play sounds</h3><p class="note" style="font-style:normal;margin:4px 0 0">The chimes during the breath and your move, the bowl at the start of the timer, the done tone, and studio background sounds. Turn off for a silent session.</p></div>
         <button class="switch" role="switch" id="sw-sound" onclick="setPref('soundOn', !state.soundOn)"><span></span></button>
       </div>
       <button class="btn" style="margin-top:26px" onclick="go(state.backFrom || 'home')">Done</button>
@@ -1052,8 +1084,8 @@ function go(name){
   document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === name));
   $('disclaimer').style.display = name === 'quote' ? 'none' : 'block';
   if (name === 'quote') renderQuote();
-  if (name === 'home') renderBlocks();
-  if (name === 'register') renderDisc();
+  if (name === 'home') { renderBlocks(); renderShape(); }
+  if (name === 'register') { renderDisc(); renderStages(); }
   if (name === 'hours') renderHours();
   if (name === 'settings') renderSettings(); else state.backFrom = ['home','log'].includes(name) ? name : state.backFrom;
   if (name === 'insights') renderInsights();
@@ -1118,18 +1150,67 @@ function renderSettings(){
     : state.hours.set ? hoursSummary() : 'Set regular times. Your calendar reminds you, and one tap opens your session.';
   $('hours-btn').textContent = state.member ? (state.hours.set ? 'Change' : 'Set') : 'Full studio';
   $('sw-numbers').setAttribute('aria-checked', state.showNumbers); $('sw-history').setAttribute('aria-checked', state.showHistory); $('sw-sound').setAttribute('aria-checked', state.soundOn !== false);
+  $('sw-optin').setAttribute('aria-checked', !!state.emailOptIn);
+  $('set-stage').innerHTML = STAGES.map(([k,l]) => `<button type="button" class="chip${state.stage===k?' on':''}" role="radio" aria-checked="${state.stage===k}" onclick="setPref('stage', state.stage==='${k}' ? null : '${k}')">${l}</button>`).join('');
   $('set-asklog').style.display = state.member ? '' : 'none'; $('sw-asklog').setAttribute('aria-checked', state.askLog !== false);
 }
 function signIn(){ state.visits++; decideConsult(); newVisit(); go('register'); }
+/* Registration: where they are with their work (one choice, optional) and an unticked email opt-in. */
+const STAGES = [['starting','Starting something new'],['middle','In the middle of a project'],['finishing','Finishing something'],['between','Between projects'],['returning','Coming back after time away']];
+function renderStages(){ $('r-stage').innerHTML = STAGES.map(([k,l]) => `<button type="button" class="chip${state.stage===k?' on':''}" role="radio" aria-checked="${state.stage===k}" onclick="pickStage('${k}')">${l}</button>`).join(''); }
+function pickStage(k){ state.stage = state.stage === k ? null : k; renderStages(); }
 function register(){
   state.name = $('r-name').value.trim() || 'friend';
+  state.emailOptIn = $('r-optin').checked;
   if ($('r-custom').value.trim()) addTag();
-  track('registered',{categories:state.disciplines.filter(d=>d!=='custom'), custom_tags:state.customTags});
+  track('registered',{categories:state.disciplines.filter(d=>d!=='custom'), custom_tags:state.customTags, stage:state.stage || null, email_opt_in:state.emailOptIn});
   /* Custom tags are saved so Suz can review popular ones and add them as categories. */
   state.practiced = $('r-years').value.trim();
   $('welcome-name').textContent = `Welcome, ${state.name}`;
   go('welcome');
 }
+/* "Help shape Call Forth": an optional card at the bottom of Home, first offered on the 5th visit (and only after at
+   least one finished session). Never inside a session, never on the same visit as Pick up where you left off.
+   "Not now" brings it back 20 visits later (and every 20 visits after that); sending it retires it for good.
+   The first two questions take more than one answer; age takes one. */
+const SHAPE_FIND = ['Instagram','A friend','A talk or workshop','A podcast','Search','Somewhere else'];
+const SHAPE_PRACTICE = ['A hobby','A serious side practice','Part of my income','My profession',"I'm a student"];
+const SHAPE_AGE = ['18–24','25–34','35–44','45–54','55–64','65+','Prefer not to say'];
+function shapeDue(){ const s = state.shape || (state.shape = { done:false, dismissed:0, next:5, a:{ found:[], practice:[] } });
+  return !s.done && state.visits >= s.next && (state.log || []).length > 0 && !state.resume; }
+function renderShape(){
+  const el = $('shape'); if (!el) return;
+  const due = shapeDue(), s = state.shape;
+  if (!due && !s.justSent) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  if (s.justSent) { el.innerHTML = `<div class="label">Help shape Call Forth</div><p class="thanks">Thank you, ${state.name}. I read every one of these.</p>`; return; }
+  if (!s.logged) { track('shape_shown',{visit:state.visits}); s.logged = true; }
+  const has = (key, v) => Array.isArray(s.a[key]) ? s.a[key].includes(v) : s.a[key] === v;
+  const chips = (key, list, multi) => `<div class="pick" role="group">${list.map(v => `<button type="button" class="chip${has(key,v)?' on':''}" aria-pressed="${has(key,v)}" onclick="shapePick('${key}',this)">${v}</button>`).join('')}</div>`;
+  el.innerHTML = `<div class="label">Help shape Call Forth</div>
+    <h3>Thirty seconds, all optional.</h3>
+    <p class="note" style="margin:0">Answer any, skip any. It helps me make Call Forth better for you, and find more people like you.</p>
+    <p class="q">How did you find Call Forth?</p><p class="note" style="margin:0">Choose all that apply.</p>${chips('found', SHAPE_FIND)}
+    <p class="q">Your practice is…</p><p class="note" style="margin:0">Choose all that apply.</p>${chips('practice', SHAPE_PRACTICE)}
+    <p class="q">Your age</p>${chips('age', SHAPE_AGE)}
+    <p class="q">What would make Call Forth a must-have for you?</p>
+    <textarea id="shape-wish" placeholder="A line or two, if you like.">${s.a.wish || ''}</textarea>
+    <label class="optin" style="margin:20px 0 0"><input type="checkbox" id="shape-testi" ${s.a.testi?'checked':''} onchange="shapeTesti(this.checked)"><span>I'd be happy to share a few words about Call Forth as a testimonial.<small>Suzanne will follow up by email first. Nothing is shared without your OK.</small></span></label>
+    <div class="field" id="shape-testi-wrap" style="margin:10px 0 0 32px;display:${s.a.testi?'block':'none'}"><label class="label" for="shape-testi-email">Email me at</label><input id="shape-testi-email" type="email" autocomplete="email" value="${s.a.testiEmail || ($('email') ? $('email').value : '')}"></div>
+    <div class="actions" style="margin-top:16px"><button class="btn" onclick="shapeSend()">Send</button><button class="btn ghost" onclick="shapeLater()">Not now</button></div>`;
+}
+function shapeKeep(){ const s = state.shape; s.a.wish = $('shape-wish').value; s.a.testiEmail = $('shape-testi-email').value; }
+function shapePick(key, btn){ const s = state.shape, v = btn.textContent; shapeKeep();
+  if (Array.isArray(s.a[key])) s.a[key] = s.a[key].includes(v) ? s.a[key].filter(x => x !== v) : [...s.a[key], v];
+  else s.a[key] = s.a[key] === v ? null : v;
+  renderShape(); }
+function shapeTesti(on){ state.shape.a.testi = on; $('shape-testi-wrap').style.display = on ? 'block' : 'none'; if (on) $('shape-testi-email').focus(); }
+function shapeSend(){ const s = state.shape; shapeKeep(); s.a.wish = s.a.wish.trim();
+  if (s.a.testi && !/^\S+@\S+\.\S+$/.test(s.a.testiEmail.trim())) { $('shape-testi-email').focus(); $('shape-testi-email').setCustomValidity('Add an email so Suzanne can reach you.'); $('shape-testi-email').reportValidity(); $('shape-testi-email').setCustomValidity(''); return; }
+  /* Answers are saved with the person's profile (not in the events table); the event only records which were answered. */
+  track('shape_sent',{found:s.a.found, practice:s.a.practice, age:s.a.age||null, wrote:!!s.a.wish, testimonial:!!s.a.testi});
+  s.done = true; s.justSent = true; renderShape(); setTimeout(() => { s.justSent = false; renderShape(); }, 6000); }
+function shapeLater(){ const s = state.shape; shapeKeep(); s.dismissed++; s.next = state.visits + 20; track('shape_dismissed',{times:s.dismissed}); renderShape(); }
 /* Consult invitation: never before 10 visits; after that, at most once per calendar month, on a random visit (about 1 in 4). Decided once per visit. */
 function decideConsult(){
   const month = new Date().toISOString().slice(0,7);
