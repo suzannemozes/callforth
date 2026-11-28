@@ -58,3 +58,7 @@ Save `warmupStartedAt = Date.now()` when they tap "I need a five-minute warm-up"
 ## doneTone.ts
 
 The done tone: one low, warm, rewarding note (G3, 196 Hz, quick landing, major-chord overtones, about 3 seconds). Call `playDoneTone(soundOn)` when the Make timer reaches zero and when the person taps "I'm done" (but not if the time-up tone has just played and they didn't choose Keep going). It replaces the old two soft bowl strikes at time up. Web Audio, no sound files; silent when Play sounds is off.
+
+## quotes.ts
+
+The Daily light quotations: 120 artist quotes curated from Suzanne's Notion database "Artist Quotations about Art", each tagged with the blocks it suits, plus `pickQuote()` (an unseen quote for today's block, then any unseen quote, and only when every quote has been seen does the cycle start again) and `attributionLine()` ("Twyla Tharp" for quotes marked Certain in Notion, "Attributed to Pablo Picasso" otherwise). Save each person's `seenQuotes` list with their profile. To add quotes, add them in Notion and regenerate this file.
